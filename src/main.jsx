@@ -236,7 +236,7 @@ function OrderConfirmation({ order, onContinue }) {
   )
 }
 
-function BagDrawer({ items, onClose, onRemove, onQuantity }) {
+function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout }) {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   return (
@@ -285,7 +285,7 @@ function BagDrawer({ items, onClose, onRemove, onQuantity }) {
             <div className="bag-summary">
               <div><span>Subtotal</span><strong>{money(total)}</strong></div>
               <p>Frete e pagamento serão calculados na próxima etapa.</p>
-              <button className="button checkout-button" type="button" onClick={openCheckout}>Ir para checkout</button>
+              <button className="button checkout-button" type="button" onClick={onCheckout}>Ir para checkout</button>
             </div>
           </>
         )}
@@ -305,7 +305,7 @@ function App() {
   })
 
   useEffect(() => {
-    localStorage.setItem('key-bag', JSON.stringify(bag))
+    try { localStorage.setItem('key-bag', JSON.stringify(bag)) } catch {}
   }, [bag])
 
   const closeMenu = () => setMenuOpen(false)
@@ -468,6 +468,7 @@ function App() {
           onClose={() => setBagOpen(false)}
           onRemove={removeFromBag}
           onQuantity={updateQuantity}
+          onCheckout={openCheckout}
         />
       )}
     </div>
