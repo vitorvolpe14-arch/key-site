@@ -579,12 +579,14 @@ function AdminPage() {
       // Publica cada banner e garante que o registro exista no servidor.
       for (let index = 0; index < (next.banners || []).length; index += 1) {
         const banner = next.banners[index]
+        const selectedFile = (files || []).find(file => file.id === banner.fileId)
+        const imagePath = banner.image || selectedFile?.storageUrl || ''
         const payload = {
           id: banner.id,
           title: banner.title || '',
           subtitle: banner.subtitle || '',
           cta: banner.cta || '',
-          image_path: banner.image || '',
+          image_path: imagePath,
           enabled: banner.enabled !== false,
           sort_order: index + 1
         }
