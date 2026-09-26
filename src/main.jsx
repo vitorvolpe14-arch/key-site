@@ -125,6 +125,91 @@ function ProductPage({ product, onBack, onAdd }) {
   )
 }
 
+function CheckoutPage({ items, onBack }) {
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const [shipping, setShipping] = useState({ name: '', email: '', phone: '', cep: '', address: '', number: '', city: '', state: '' })
+  const [payment, setPayment] = useState('pix')
+
+  const update = e => setShipping(current => ({ ...current, [e.target.name]: e.target.value }))
+
+  if (items.length === 0) {
+    return (
+      <main className="checkout-page checkout-empty">
+        <p className="eyebrow">KEY / CHECKOUT</p>
+        <h1>Sua sacola está vazia.</h1>
+        <button className="button" onClick={onBack}>Voltar à loja</button>
+      </main>
+    )
+  }
+
+  return (
+    <main className="checkout-page">
+      <div className="checkout-top">
+        <button className="back-link" onClick={onBack}>← Voltar à sacola</button>
+        <span>KEY / CHECKOUT</span>
+      </div>
+
+      <div className="checkout-layout">
+        <section className="checkout-form">
+          <p className="eyebrow">SEUS DADOS</p>
+          <h1>Finalizar pedido</h1>
+
+          <div className="checkout-fields">
+            <label>Nome<input name="name" value={shipping.name} onChange={update} placeholder="Seu nome" /></label>
+            <label>E-mail<input name="email" type="email" value={shipping.email} onChange={update} placeholder="seu@email.com" /></label>
+            <label>Telefone<input name="phone" value={shipping.phone} onChange={update} placeholder="(00) 00000-0000" /></label>
+          </div>
+
+          <div className="checkout-section">
+            <p className="eyebrow">ENTREGA</p>
+            <div className="checkout-fields address-grid">
+              <label>CEP<input name="cep" value={shipping.cep} onChange={update} placeholder="00000-000" /></label>
+              <label>Endereço<input name="address" value={shipping.address} onChange={update} placeholder="Rua, avenida..." /></label>
+              <label>Número<input name="number" value={shipping.number} onChange={update} placeholder="000" /></label>
+              <label>Cidade<input name="city" value={shipping.city} onChange={update} placeholder="Sua cidade" /></label>
+              <label>UF<input name="state" value={shipping.state} onChange={update} placeholder="CE" maxLength="2" /></label>
+            </div>
+          </div>
+
+          <div className="checkout-section">
+            <p className="eyebrow">PAGAMENTO</p>
+            <div className="payment-options">
+              <button type="button" className={payment === 'pix' ? 'active' : ''} onClick={() => setPayment('pix')}>
+                <span>Pix</span><small>Pagamento instantâneo</small>
+              </button>
+              <button type="button" className={payment === 'card' ? 'active' : ''} onClick={() => setPayment('card')}>
+                <span>Cartão</span><small>Crédito ou débito</small>
+              </button>
+            </div>
+            <p className="checkout-hint">O pagamento será configurado em uma próxima etapa.</p>
+          </div>
+        </section>
+
+        <aside className="checkout-summary">
+          <p className="eyebrow">SEU PEDIDO</p>
+          <div className="checkout-items">
+            {items.map(item => (
+              <div className="checkout-item" key={item.key}>
+                <div className="checkout-thumb"><ProductImage product={item} /></div>
+                <div>
+                  <h3>{item.name}</h3>
+                  <p>{item.size} · {item.quantity}x</p>
+                </div>
+                <strong>{money(item.price * item.quantity)}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="checkout-total"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
+          <div className="checkout-total muted"><span>Frete</span><span>A calcular</span></div>
+          <div className="checkout-total grand"><span>Total</span><strong>{money(subtotal)}</strong></div>
+          <button className="button checkout-final" type="button">Continuar</button>
+          <p className="checkout-secure">Seus dados ficam nesta etapa até o pagamento ser conectado.</p>
+        </aside>
+      </div>
+    </main>
+  )
+}
+
 function BagDrawer({ items, onClose, onRemove, onQuantity }) {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -174,7 +259,7 @@ function BagDrawer({ items, onClose, onRemove, onQuantity }) {
             <div className="bag-summary">
               <div><span>Subtotal</span><strong>{money(total)}</strong></div>
               <p>Frete e pagamento serão calculados na próxima etapa.</p>
-              <button className="button checkout-button" type="button">Ir para checkout</button>
+              <button className="button checkout-button" type="button" onClick={openCheckout}>Ir para checkout</button>
             </div>
           </>
         )}
@@ -187,9 +272,17 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [bagOpen, setBagOpen] = useState(false)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [bag, setBag] = useState([])
 
   const closeMenu = () => setMenuOpen(false)
+  const openCheckout = () => {
+    setBagOpen(false)
+    setCheckoutOpen(true)
+    setSelectedProduct(null)
+    closeMenu()
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
   const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)
 
   const openProduct = product => {
@@ -252,7 +345,9 @@ function App() {
         <p>KEY — Unlock your style.</p>
       </div>
 
-      {selectedProduct ? (
+      {checkoutOpen ? (
+        <CheckoutPage items={bag} onBack={() => setCheckoutOpen(false)} />
+      ) : selectedProduct ? (
         <ProductPage product={selectedProduct} onBack={() => setSelectedProduct(null)} onAdd={addToBag} />
       ) : (
         <>
