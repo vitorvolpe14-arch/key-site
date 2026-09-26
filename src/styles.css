@@ -309,17 +309,17 @@ button { color: inherit; }
 }
 .category-card:hover::before { transform: scale(1.04); }
 .category-dresses {
-  background-image: linear-gradient(180deg, rgba(42,16,25,.03) 35%, rgba(42,16,25,.52) 100%), url("https://images.pexels.com/photos/14532615/pexels-photo-14532615.jpeg?cs=srgb&dl=pexels-andrea-musto-135941147-14532615.jpg&fm=jpg");
+  background-image: linear-gradient(180deg, rgba(42,16,25,.03) 35%, rgba(42,16,25,.48) 100%), url("/key/poair.jpeg");
   background-size: cover;
   background-position: center;
 }
 .category-sets {
-  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.55) 100%), url("https://images.pexels.com/photos/9377941/pexels-photo-9377941.jpeg?cs=srgb&dl=pexels-zratechnologies-9377941.jpg&fm=jpg");
+  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.50) 100%), url("/key/blazer.jpeg");
   background-size: cover;
   background-position: center;
 }
 .category-tops {
-  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.58) 100%), url("https://images.pexels.com/photos/11791522/pexels-photo-11791522.jpeg?cs=srgb&dl=pexels-redwolf-11791522.jpg&fm=jpg");
+  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.52) 100%), url("/key/blusa%20vermelha.jpeg");
   background-size: cover;
   background-position: center;
 }
