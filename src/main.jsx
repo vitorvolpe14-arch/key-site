@@ -400,7 +400,8 @@ function App() {
   const [bagOpen, setBagOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [confirmation, setConfirmation] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('key-last-order') || 'null') } catch { return null }\n  })
+    try { return JSON.parse(localStorage.getItem('key-last-order') || 'null') } catch { return null }
+  })
   const [bag, setBag] = useState(() => {
     try { return JSON.parse(localStorage.getItem('key-bag') || '[]') } catch { return [] }
   })
