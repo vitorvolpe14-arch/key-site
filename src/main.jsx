@@ -129,13 +129,95 @@ function CheckoutPage({ items, onBack, onComplete }) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const [shipping, setShipping] = useState({ name: '', email: '', phone: '', cep: '', address: '', number: '', city: '', state: '' })
   const [payment, setPayment] = useState('pix')
+  const [shippingCost, setShippingCost] = useState(null)
+  const [shippingLabel, setShippingLabel] = useState('Informe o CEP')
+  const [cepLoading, setCepLoading] = useState(false)
+  const [cepError, setCepError] = useState('')
 
-  const update = e => setShipping(current => ({ ...current, [e.target.name]: e.target.value }))
+  const update = e => {
+    const { name, value } = e.target
+    setShipping(current => ({ ...current, [name]: name === 'state' ? value.toUpperCase() : value }))
+  }
+
+  const calculateShipping = ({ city, state }) => {
+    const normalizedCity = city.trim().toLowerCase()
+    const normalizedState = state.trim().toUpperCase()
+
+    if (normalizedState !== 'CE') {
+      setShippingCost(null)
+      setShippingLabel('Frete a calcular')
+      return
+    }
+
+    if (normalizedCity === 'fortaleza') {
+      setShippingCost(15)
+      setShippingLabel('Fortaleza')
+      return
+    }
+
+    const metroCities = [
+      'caucaia', 'eusebio', 'eusébio', 'aquiraz', 'maracanau', 'maracanaú',
+      'maranguape', 'pacatuba', 'horizonte', 'itaitinga', 'guaiuba', 'guaiúba',
+      'chorozinho', 'pindoretama', 'sao goncalo do amarante', 'são gonçalo do amarante'
+    ]
+
+    if (metroCities.includes(normalizedCity)) {
+      setShippingCost(20)
+      setShippingLabel('Região Metropolitana de Fortaleza')
+      return
+    }
+
+    setShippingCost(null)
+    setShippingLabel('Frete a calcular')
+  }
+
+  const lookupCep = async () => {
+    const cep = shipping.cep.replace(/\\D/g, '')
+    if (cep.length !== 8) {
+      setCepError('Digite um CEP válido.')
+      return
+    }
+
+    setCepLoading(true)
+    setCepError('')
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      if (!response.ok) throw new Error('CEP')
+      const data = await response.json()
+      if (data.erro) throw new Error('CEP')
+
+      setShipping(current => ({
+        ...current,
+        address: data.logradouro || current.address,
+        city: data.localidade || current.city,
+        state: data.uf || current.state
+      }))
+      calculateShipping({ city: data.localidade || '', state: data.uf || '' })
+    } catch {
+      setShippingCost(null)
+      setShippingLabel('Frete a calcular')
+      setCepError('Não foi possível localizar este CEP.')
+    } finally {
+      setCepLoading(false)
+    }
+  }
+
+  const total = subtotal + (shippingCost || 0)
+
   const complete = e => {
     e.preventDefault()
     const required = ['name', 'email', 'phone', 'cep', 'address', 'number', 'city', 'state']
     if (required.some(field => !shipping[field].trim())) return
-    onComplete({ shipping, payment, subtotal })
+
+    onComplete({
+      shipping,
+      payment,
+      subtotal,
+      shippingCost,
+      shippingLabel,
+      total
+    })
   }
 
   if (items.length === 0) {
@@ -169,12 +251,20 @@ function CheckoutPage({ items, onBack, onComplete }) {
           <div className="checkout-section">
             <p className="eyebrow">ENTREGA</p>
             <div className="checkout-fields address-grid">
-              <label>CEP<input required name="cep" value={shipping.cep} onChange={update} placeholder="00000-000" /></label>
+              <label>
+                CEP
+                <div className="cep-field">
+                  <input required name="cep" value={shipping.cep} onChange={update} onBlur={lookupCep} placeholder="00000-000" inputMode="numeric" maxLength="9" />
+                  <button type="button" onClick={lookupCep}>{cepLoading ? '...' : 'Buscar'}</button>
+                </div>
+                {cepError && <small className="field-error">{cepError}</small>}
+              </label>
               <label>Endereço<input required name="address" value={shipping.address} onChange={update} placeholder="Rua, avenida..." /></label>
               <label>Número<input required name="number" value={shipping.number} onChange={update} placeholder="000" /></label>
-              <label>Cidade<input required name="city" value={shipping.city} onChange={update} placeholder="Sua cidade" /></label>
-              <label>UF<input required name="state" value={shipping.state} onChange={update} placeholder="CE" maxLength="2" /></label>
+              <label>Cidade<input required name="city" value={shipping.city} onChange={update} onBlur={() => calculateShipping(shipping)} placeholder="Sua cidade" /></label>
+              <label>UF<input required name="state" value={shipping.state} onChange={update} onBlur={() => calculateShipping(shipping)} placeholder="CE" maxLength="2" /></label>
             </div>
+            <p className="shipping-note">Fortaleza: R$ 15,00 · Região Metropolitana: R$ 20,00 · Demais localidades: frete será integrado posteriormente.</p>
           </div>
 
           <div className="checkout-section">
@@ -203,8 +293,8 @@ function CheckoutPage({ items, onBack, onComplete }) {
             ))}
           </div>
           <div className="checkout-total"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
-          <div className="checkout-total muted"><span>Frete</span><span>A calcular</span></div>
-          <div className="checkout-total grand"><span>Total</span><strong>{money(subtotal)}</strong></div>
+          <div className="checkout-total muted"><span>Frete</span><strong>{shippingCost === null ? shippingLabel : money(shippingCost)}</strong></div>
+          <div className="checkout-total grand"><span>Total</span><strong>{money(total)}</strong></div>
           <button className="button checkout-final" type="submit">Revisar pedido</button>
           <p className="checkout-secure">Nenhum pagamento será realizado nesta etapa.</p>
         </aside>
@@ -228,14 +318,24 @@ function OrderConfirmation({ order, onContinue }) {
         <div className="confirmation-summary">
           <div><span>Cliente</span><strong>{order.shipping.name}</strong></div>
           <div><span>Pagamento</span><strong>{order.payment === 'pix' ? 'Pix' : 'Cartão'}</strong></div>
-          <div><span>Total</span><strong>{money(order.subtotal)}</strong></div>
+          <div><span>Total</span><strong>{money(order.total)}</strong></div>
+        </div>
+        <div className="confirmation-delivery">
+          <div><span>Entrega</span><strong>{order.shipping.address}, {order.shipping.number}</strong></div>
+          <div><span>Cidade / UF</span><strong>{order.shipping.city} — {order.shipping.state}</strong></div>
+          <div><span>Frete</span><strong>{order.shippingCost === null ? order.shippingLabel : money(order.shippingCost)}</strong></div>
+        </div>
+        <div className="confirmation-products">
+          <span>Itens</span>
+          {order.items.map(item => (
+            <div key={item.key}><span>{item.quantity}x {item.name} · {item.size}</span><strong>{money(item.price * item.quantity)}</strong></div>
+          ))}
         </div>
         <button className="button" onClick={onContinue}>Continuar na KEY</button>
       </div>
     </main>
   )
 }
-
 function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout }) {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -299,7 +399,7 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [bagOpen, setBagOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [confirmation, setConfirmation] = useState(null)
+  const [confirmation, setConfirmation] = useState(() => {\n    try { return JSON.parse(localStorage.getItem('key-last-order') || 'null') } catch { return null }\n  })
   const [bag, setBag] = useState(() => {
     try { return JSON.parse(localStorage.getItem('key-bag') || '[]') } catch { return [] }
   })
@@ -389,7 +489,7 @@ function App() {
       {confirmation ? (
         <OrderConfirmation order={confirmation} onContinue={() => { setConfirmation(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
       ) : checkoutOpen ? (
-        <CheckoutPage items={bag} onBack={() => setCheckoutOpen(false)} onComplete={finishOrder} />
+        <CheckoutPage items={bag} onBack={() => { setCheckoutOpen(false); setBagOpen(true) }} onComplete={finishOrder} />
       ) : selectedProduct ? (
         <ProductPage product={selectedProduct} onBack={() => setSelectedProduct(null)} onAdd={addToBag} />
       ) : (
