@@ -2580,3 +2580,52 @@ footer a:hover {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* PHASE 9 — PRODUCT GRID CLEANUP */
+.product-image {
+  background: #f7f4f0;
+}
+.product-image img {
+  object-fit: contain;
+  object-position: center;
+  padding: 0;
+}
+.product-card-button {
+  isolation: isolate;
+}
+.product-card-button .stock-badge {
+  position: absolute !important;
+  top: 12px !important;
+  left: 12px !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: max-content !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: calc(100% - 24px) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px 8px !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+.product-card-button .stock-badge.sold {
+  background: var(--deep) !important;
+  color: #fff !important;
+}
+.product-card-button .product-category {
+  z-index: 3;
+}
+@media (max-width: 760px) {
+  .product-card-button .stock-badge {
+    top: 8px !important;
+    left: 8px !important;
+    max-width: calc(100% - 16px) !important;
+    padding: 5px 7px !important;
+  }
+}
