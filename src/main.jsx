@@ -125,12 +125,18 @@ function ProductPage({ product, onBack, onAdd }) {
   )
 }
 
-function CheckoutPage({ items, onBack }) {
+function CheckoutPage({ items, onBack, onComplete }) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const [shipping, setShipping] = useState({ name: '', email: '', phone: '', cep: '', address: '', number: '', city: '', state: '' })
   const [payment, setPayment] = useState('pix')
 
   const update = e => setShipping(current => ({ ...current, [e.target.name]: e.target.value }))
+  const complete = e => {
+    e.preventDefault()
+    const required = ['name', 'email', 'phone', 'cep', 'address', 'number', 'city', 'state']
+    if (required.some(field => !shipping[field].trim())) return
+    onComplete({ shipping, payment, subtotal })
+  }
 
   if (items.length === 0) {
     return (
@@ -149,25 +155,25 @@ function CheckoutPage({ items, onBack }) {
         <span>KEY / CHECKOUT</span>
       </div>
 
-      <div className="checkout-layout">
+      <form className="checkout-layout" onSubmit={complete}>
         <section className="checkout-form">
           <p className="eyebrow">SEUS DADOS</p>
           <h1>Finalizar pedido</h1>
 
           <div className="checkout-fields">
-            <label>Nome<input name="name" value={shipping.name} onChange={update} placeholder="Seu nome" /></label>
-            <label>E-mail<input name="email" type="email" value={shipping.email} onChange={update} placeholder="seu@email.com" /></label>
-            <label>Telefone<input name="phone" value={shipping.phone} onChange={update} placeholder="(00) 00000-0000" /></label>
+            <label>Nome<input required name="name" value={shipping.name} onChange={update} placeholder="Seu nome" /></label>
+            <label>E-mail<input required name="email" type="email" value={shipping.email} onChange={update} placeholder="seu@email.com" /></label>
+            <label>Telefone<input required name="phone" value={shipping.phone} onChange={update} placeholder="(00) 00000-0000" /></label>
           </div>
 
           <div className="checkout-section">
             <p className="eyebrow">ENTREGA</p>
             <div className="checkout-fields address-grid">
-              <label>CEP<input name="cep" value={shipping.cep} onChange={update} placeholder="00000-000" /></label>
-              <label>Endereço<input name="address" value={shipping.address} onChange={update} placeholder="Rua, avenida..." /></label>
-              <label>Número<input name="number" value={shipping.number} onChange={update} placeholder="000" /></label>
-              <label>Cidade<input name="city" value={shipping.city} onChange={update} placeholder="Sua cidade" /></label>
-              <label>UF<input name="state" value={shipping.state} onChange={update} placeholder="CE" maxLength="2" /></label>
+              <label>CEP<input required name="cep" value={shipping.cep} onChange={update} placeholder="00000-000" /></label>
+              <label>Endereço<input required name="address" value={shipping.address} onChange={update} placeholder="Rua, avenida..." /></label>
+              <label>Número<input required name="number" value={shipping.number} onChange={update} placeholder="000" /></label>
+              <label>Cidade<input required name="city" value={shipping.city} onChange={update} placeholder="Sua cidade" /></label>
+              <label>UF<input required name="state" value={shipping.state} onChange={update} placeholder="CE" maxLength="2" /></label>
             </div>
           </div>
 
@@ -181,7 +187,7 @@ function CheckoutPage({ items, onBack }) {
                 <span>Cartão</span><small>Crédito ou débito</small>
               </button>
             </div>
-            <p className="checkout-hint">O pagamento será configurado em uma próxima etapa.</p>
+            <p className="checkout-hint">Pagamento real será conectado posteriormente.</p>
           </div>
         </section>
 
@@ -191,10 +197,7 @@ function CheckoutPage({ items, onBack }) {
             {items.map(item => (
               <div className="checkout-item" key={item.key}>
                 <div className="checkout-thumb"><ProductImage product={item} /></div>
-                <div>
-                  <h3>{item.name}</h3>
-                  <p>{item.size} · {item.quantity}x</p>
-                </div>
+                <div><h3>{item.name}</h3><p>{item.size} · {item.quantity}x</p></div>
                 <strong>{money(item.price * item.quantity)}</strong>
               </div>
             ))}
@@ -202,9 +205,32 @@ function CheckoutPage({ items, onBack }) {
           <div className="checkout-total"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
           <div className="checkout-total muted"><span>Frete</span><span>A calcular</span></div>
           <div className="checkout-total grand"><span>Total</span><strong>{money(subtotal)}</strong></div>
-          <button className="button checkout-final" type="button">Continuar</button>
-          <p className="checkout-secure">Seus dados ficam nesta etapa até o pagamento ser conectado.</p>
+          <button className="button checkout-final" type="submit">Revisar pedido</button>
+          <p className="checkout-secure">Nenhum pagamento será realizado nesta etapa.</p>
         </aside>
+      </form>
+    </main>
+  )
+}
+
+function OrderConfirmation({ order, onContinue }) {
+  return (
+    <main className="confirmation-page">
+      <div className="confirmation-card">
+        <p className="eyebrow">KEY / PEDIDO</p>
+        <div className="confirmation-mark">✓</div>
+        <h1>Pedido recebido.</h1>
+        <p className="confirmation-text">Sua seleção foi registrada. O pagamento ainda não foi processado.</p>
+        <div className="confirmation-number">
+          <span>Número do pedido</span>
+          <strong>{order.number}</strong>
+        </div>
+        <div className="confirmation-summary">
+          <div><span>Cliente</span><strong>{order.shipping.name}</strong></div>
+          <div><span>Pagamento</span><strong>{order.payment === 'pix' ? 'Pix' : 'Cartão'}</strong></div>
+          <div><span>Total</span><strong>{money(order.subtotal)}</strong></div>
+        </div>
+        <button className="button" onClick={onContinue}>Continuar na KEY</button>
       </div>
     </main>
   )
@@ -273,7 +299,14 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [bagOpen, setBagOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
-  const [bag, setBag] = useState([])
+  const [confirmation, setConfirmation] = useState(null)
+  const [bag, setBag] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('key-bag') || '[]') } catch { return [] }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('key-bag', JSON.stringify(bag))
+  }, [bag])
 
   const closeMenu = () => setMenuOpen(false)
   const openCheckout = () => {
@@ -284,6 +317,14 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
   const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)
+
+  const finishOrder = details => {
+    const number = `KEY-${Date.now().toString().slice(-6)}`
+    setConfirmation({ ...details, number })
+    setBag([])
+    setCheckoutOpen(false)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
 
   const openProduct = product => {
     setSelectedProduct(product)
@@ -345,8 +386,10 @@ function App() {
         <p>KEY — Unlock your style.</p>
       </div>
 
-      {checkoutOpen ? (
-        <CheckoutPage items={bag} onBack={() => setCheckoutOpen(false)} />
+      {confirmation ? (
+        <OrderConfirmation order={confirmation} onContinue={() => { setConfirmation(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
+      ) : checkoutOpen ? (
+        <CheckoutPage items={bag} onBack={() => setCheckoutOpen(false)} onComplete={finishOrder} />
       ) : selectedProduct ? (
         <ProductPage product={selectedProduct} onBack={() => setSelectedProduct(null)} onAdd={addToBag} />
       ) : (
