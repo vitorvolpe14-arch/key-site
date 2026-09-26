@@ -437,8 +437,43 @@ function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout, inventory
 }
 
 
+
 const ADMIN_DB = 'key-admin-assets'
 const ADMIN_STORE = 'files'
+const ADMIN_CONFIG = 'key-site-config'
+
+const defaultAdminConfig = {
+  announcement: 'FREE SHIPPING ON ORDERS OVER R$ 499',
+  freeShippingThreshold: 499,
+  banners: [
+    { id: 1, title: 'Wear your key piece.', subtitle: 'Uma seleção feminina pensada para marcar presença.', cta: 'Ver coleção', fileId: '', image: '/key/banner-01.jpg', enabled: true },
+    { id: 2, title: 'New collection.', subtitle: 'Descubra a nova seleção KEY.', cta: 'Descobrir', fileId: '', image: '', enabled: true },
+    { id: 3, title: 'Find your key.', subtitle: 'Peças para construir seu guarda-roupa.', cta: 'Ver coleção', fileId: '', image: '', enabled: true }
+  ],
+  products: Object.fromEntries(products.map(product => [product.id, {
+    name: product.name,
+    price: product.price,
+    category: product.category,
+    description: product.description,
+    image: product.image || '',
+    fileId: '',
+    visible: true
+  }]))
+}
+
+function readAdminConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ADMIN_CONFIG) || 'null')
+    return {
+      ...defaultAdminConfig,
+      ...(saved || {}),
+      banners: Array.isArray(saved?.banners) ? saved.banners : defaultAdminConfig.banners,
+      products: { ...defaultAdminConfig.products, ...(saved?.products || {}) }
+    }
+  } catch {
+    return defaultAdminConfig
+  }
+}
 
 function adminOpenDB() {
   return new Promise((resolve, reject) => {
@@ -482,15 +517,24 @@ async function adminDeleteFile(id) {
 }
 
 function AdminPage() {
+  const [tab, setTab] = useState('overview')
   const [files, setFiles] = useState([])
-  const [dragging, setDragging] = useState(false)
+  const [config, setConfig] = useState(readAdminConfig)
   const [category, setCategory] = useState('banner')
+  const [dragging, setDragging] = useState(false)
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
+  const [selectedProductId, setSelectedProductId] = useState(1)
 
   useEffect(() => {
     adminListFiles().then(setFiles).catch(() => setNotice('Não foi possível carregar a biblioteca.')).finally(() => setLoading(false))
   }, [])
+
+  const saveConfig = next => {
+    setConfig(next)
+    localStorage.setItem(ADMIN_CONFIG, JSON.stringify(next))
+    setNotice('Alterações publicadas neste navegador.')
+  }
 
   const addFiles = async selected => {
     const accepted = Array.from(selected).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'))
@@ -513,6 +557,7 @@ function AdminPage() {
       await adminSaveFiles(newFiles)
       setFiles(current => [...newFiles, ...current])
       setNotice(`${newFiles.length} arquivo${newFiles.length > 1 ? 's' : ''} adicionado${newFiles.length > 1 ? 's' : ''} à biblioteca.`)
+      setTab('media')
     } catch {
       setNotice('Não foi possível salvar os arquivos.')
     }
@@ -520,100 +565,218 @@ function AdminPage() {
 
   const remove = async id => {
     await adminDeleteFile(id)
+    const next = { ...config }
+    next.banners = next.banners.map(b => b.fileId === id ? { ...b, fileId: '', image: '' } : b)
+    next.products = Object.fromEntries(Object.entries(next.products).map(([key, value]) => [key, value.fileId === id ? { ...value, fileId: '', image: '' } : value]))
+    localStorage.setItem(ADMIN_CONFIG, JSON.stringify(next))
+    setConfig(next)
     setFiles(current => current.filter(file => file.id !== id))
     setNotice('Arquivo removido.')
   }
 
-  const leave = () => {
-    window.location.href = '/'
+  const fileUrl = file => {
+    try { return URL.createObjectURL(file.blob) } catch { return '' }
   }
 
-  return (
-    <div className="admin-page">
-      <header className="admin-header">
-        <div>
-          <p className="admin-kicker">KEY / MANAGEMENT</p>
-          <h1>Gerenciador</h1>
+  const chooseBannerImage = (bannerId, file) => {
+    const next = {
+      ...config,
+      banners: config.banners.map(b => b.id === bannerId ? { ...b, fileId: file.id, image: '' } : b)
+    }
+    saveConfig(next)
+  }
+
+  const updateBanner = (id, field, value) => {
+    setConfig(current => ({
+      ...current,
+      banners: current.banners.map(b => b.id === id ? { ...b, [field]: value } : b)
+    }))
+  }
+
+  const updateProduct = (id, field, value) => {
+    setConfig(current => ({
+      ...current,
+      products: { ...current.products, [id]: { ...current.products[id], [field]: value } }
+    }))
+  }
+
+  const selectProductImage = file => {
+    const next = {
+      ...config,
+      products: { ...config.products, [selectedProductId]: { ...config.products[selectedProductId], fileId: file.id, image: '' } }
+    }
+    saveConfig(next)
+  }
+
+  const leave = () => { window.location.href = '/' }
+
+  const nav = [
+    ['overview', 'Visão geral'],
+    ['banners', 'Banners'],
+    ['products', 'Produtos'],
+    ['media', 'Arquivos'],
+    ['settings', 'Configurações']
+  ]
+
+  const renderMediaPicker = (onChoose, label = 'Escolher arquivo') => (
+    <div className="admin-picker">
+      <div className="admin-picker-head"><span>{label}</span><small>{files.length} disponíveis</small></div>
+      {files.length === 0 ? (
+        <div className="admin-picker-empty">Envie arquivos na aba Arquivos.</div>
+      ) : (
+        <div className="admin-picker-grid">
+          {files.map(file => (
+            <button type="button" key={file.id} className="admin-picker-item" onClick={() => onChoose(file)}>
+              {file.type.startsWith('video/') ? <video src={fileUrl(file)} muted /> : <img src={fileUrl(file)} alt="" />}
+              <span>{file.name}</span>
+            </button>
+          ))}
         </div>
-        <button type="button" className="admin-back" onClick={leave}>Voltar para a loja →</button>
-      </header>
+      )}
+    </div>
+  )
 
-      <main className="admin-main">
-        <section className="admin-upload-section">
-          <div className="admin-section-heading">
-            <div>
-              <p className="eyebrow">BIBLIOTECA DE ARQUIVOS</p>
-              <h2>Adicionar conteúdo</h2>
-            </div>
-            <label className="admin-select">
-              <span>Destino</span>
-              <select value={category} onChange={e => setCategory(e.target.value)}>
-                <option value="banner">Banner</option>
-                <option value="produto">Produto</option>
-                <option value="editorial">Editorial</option>
-                <option value="outro">Outro</option>
-              </select>
-            </label>
+  return (
+    <div className="admin-shell">
+      <aside className="admin-sidebar">
+        <div className="admin-brand"><span>KEY</span><small>Management</small></div>
+        <nav>
+          {nav.map(([id, label]) => (
+            <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
+              <span className="admin-nav-dot" />{label}
+            </button>
+          ))}
+        </nav>
+        <button className="admin-sidebar-store" onClick={leave}>Ver loja <span>↗</span></button>
+      </aside>
+
+      <main className="admin-content">
+        <header className="admin-topbar">
+          <div>
+            <p className="admin-kicker">KEY / MANAGEMENT</p>
+            <h1>{nav.find(item => item[0] === tab)?.[1]}</h1>
           </div>
+          <button className="admin-publish" onClick={() => saveConfig(config)}>Publicar alterações <span>→</span></button>
+        </header>
 
-          <label
-            className={`admin-dropzone ${dragging ? 'is-dragging' : ''}`}
-            onDragOver={e => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={e => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}
-          >
-            <input
-              type="file"
-              multiple
-              accept="image/*,video/*"
-              onChange={e => { addFiles(e.target.files); e.target.value = '' }}
-            />
-            <span className="admin-drop-icon">＋</span>
-            <strong>Arraste os arquivos aqui</strong>
-            <span>ou clique para selecionar do computador</span>
-            <small>Imagens e vídeos · múltiplos arquivos permitidos</small>
-          </label>
-        </section>
-
-        <section className="admin-library">
-          <div className="admin-library-head">
-            <div>
-              <p className="eyebrow">SEUS ARQUIVOS</p>
-              <h2>Biblioteca</h2>
+        {tab === 'overview' && (
+          <div className="admin-dashboard">
+            <section className="admin-welcome">
+              <div><p className="eyebrow">PAINEL DA KEY</p><h2>Seu site, em um só lugar.</h2><p>Gerencie banners, produtos e arquivos sem precisar mexer no código.</p></div>
+              <button className="admin-primary" onClick={() => setTab('banners')}>Editar página inicial →</button>
+            </section>
+            <div className="admin-stats">
+              <div><span>Produtos</span><strong>{products.length}</strong><small>cadastrados</small></div>
+              <div><span>Banners</span><strong>{config.banners.filter(b => b.enabled).length}</strong><small>ativos</small></div>
+              <div><span>Arquivos</span><strong>{files.length}</strong><small>na biblioteca</small></div>
+              <div><span>Frete grátis</span><strong>R$ {Number(config.freeShippingThreshold || 0).toLocaleString('pt-BR')}</strong><small>acima desse valor</small></div>
             </div>
-            <span>{files.length} arquivo{files.length !== 1 ? 's' : ''}</span>
+            <section className="admin-card admin-quick">
+              <div><div><p className="eyebrow">ACESSO RÁPIDO</p><h3>O que você quer alterar?</h3></div></div>
+              <div className="admin-quick-grid">
+                <button onClick={() => setTab('banners')}><strong>Banners</strong><span>Trocar imagens e textos da home →</span></button>
+                <button onClick={() => setTab('products')}><strong>Produtos</strong><span>Preço, descrição e fotos →</span></button>
+                <button onClick={() => setTab('media')}><strong>Arquivos</strong><span>Enviar novas imagens →</span></button>
+                <button onClick={() => setTab('settings')}><strong>Configurações</strong><span>Frete e comunicação →</span></button>
+              </div>
+            </section>
           </div>
+        )}
 
-          {loading ? (
-            <div className="admin-empty">Carregando biblioteca…</div>
-          ) : files.length === 0 ? (
-            <div className="admin-empty">Nenhum arquivo adicionado ainda.</div>
-          ) : (
-            <div className="admin-file-grid">
-              {files.map(file => {
-                const src = URL.createObjectURL(file.blob)
+        {tab === 'banners' && (
+          <div className="admin-page-section">
+            <div className="admin-section-intro"><div><p className="eyebrow">HOME / HERO</p><h2>Controle os banners.</h2><p>Escolha a imagem e edite o conteúdo de cada posição da página inicial.</p></div></div>
+            <div className="admin-banner-list">
+              {config.banners.map((banner, index) => {
+                const selected = files.find(file => file.id === banner.fileId)
+                const image = selected ? fileUrl(selected) : banner.image
                 return (
-                  <article className="admin-file-card" key={file.id}>
-                    <div className="admin-file-preview">
-                      {file.type.startsWith('video/') ? <video src={src} muted controls preload="metadata" /> : <img src={src} alt={file.name} />}
+                  <article className="admin-banner-card" key={banner.id}>
+                    <div className="admin-banner-preview" style={image ? { backgroundImage: `url("${image}")` } : undefined}>
+                      {!image && <span>Banner {index + 1}<br />sem imagem</span>}
+                      <div className="admin-banner-number">0{index + 1}</div>
                     </div>
-                    <div className="admin-file-info">
-                      <span className="admin-file-tag">{file.category}</span>
-                      <strong title={file.name}>{file.name}</strong>
-                      <small>{(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                    <div className="admin-banner-fields">
+                      <div className="admin-inline-head"><div><span className="admin-label">BANNER 0{index + 1}</span><h3>{banner.enabled ? 'Ativo' : 'Oculto'}</h3></div><label className="admin-switch"><input type="checkbox" checked={banner.enabled} onChange={e => updateBanner(banner.id, 'enabled', e.target.checked)} /><span /></label></div>
+                      <label>Título<input value={banner.title} onChange={e => updateBanner(banner.id, 'title', e.target.value)} /></label>
+                      <label>Texto<input value={banner.subtitle} onChange={e => updateBanner(banner.id, 'subtitle', e.target.value)} /></label>
+                      <label>Botão<input value={banner.cta} onChange={e => updateBanner(banner.id, 'cta', e.target.value)} /></label>
+                      <div className="admin-image-actions">
+                        <button type="button" onClick={() => setTab('media')}>Enviar nova imagem</button>
+                        {files.length > 0 && <select value={banner.fileId} onChange={e => {
+                          const file = files.find(item => item.id === e.target.value)
+                          if (file) chooseBannerImage(banner.id, file)
+                        }}><option value="">Selecionar da biblioteca</option>{files.map(file => <option key={file.id} value={file.id}>{file.name}</option>)}</select>}
+                      </div>
                     </div>
-                    <button type="button" className="admin-delete" onClick={() => remove(file.id)}>Excluir</button>
                   </article>
                 )
               })}
             </div>
-          )}
-        </section>
+          </div>
+        )}
 
-        <section className="admin-note">
-          <strong>Como funciona nesta etapa</strong>
-          <p>Os arquivos ficam salvos na biblioteca deste navegador, sem banco de dados ou checkout externo. A próxima camada pode publicar essa biblioteca no armazenamento do site para que os arquivos escolhidos aqui apareçam para todos os visitantes.</p>
-        </section>
+        {tab === 'products' && (
+          <div className="admin-page-section">
+            <div className="admin-section-intro"><div><p className="eyebrow">CATÁLOGO</p><h2>Seus produtos.</h2><p>Edite as informações principais e escolha a foto de cada peça.</p></div></div>
+            <div className="admin-product-manager">
+              <div className="admin-product-list">
+                {products.map(product => {
+                  const data = config.products[product.id]
+                  const selected = files.find(file => file.id === data.fileId)
+                  const image = selected ? fileUrl(selected) : data.image
+                  return <button key={product.id} className={selectedProductId === product.id ? 'active' : ''} onClick={() => setSelectedProductId(product.id)}>
+                    <span className="admin-product-mini">{image ? <img src={image} alt="" /> : <span>—</span>}</span><span><strong>{data.name}</strong><small>{money(Number(data.price) || 0)}</small></span>
+                  </button>
+                })}
+              </div>
+              <div className="admin-product-editor">
+                {(() => {
+                  const data = config.products[selectedProductId]
+                  const selected = files.find(file => file.id === data.fileId)
+                  const image = selected ? fileUrl(selected) : data.image
+                  return <>
+                    <div className="admin-editor-image">{image ? <img src={image} alt={data.name} /> : <span>Sem foto</span>}</div>
+                    <div className="admin-editor-fields">
+                      <div className="admin-editor-title"><p className="eyebrow">PRODUTO {String(selectedProductId).padStart(2, '0')}</p><h3>{data.name}</h3></div>
+                      <label>Nome<input value={data.name} onChange={e => updateProduct(selectedProductId, 'name', e.target.value)} /></label>
+                      <div className="admin-two-fields"><label>Preço<input type="number" value={data.price} onChange={e => updateProduct(selectedProductId, 'price', Number(e.target.value))} /></label><label>Categoria<input value={data.category} onChange={e => updateProduct(selectedProductId, 'category', e.target.value)} /></label></div>
+                      <label>Descrição<textarea rows="4" value={data.description} onChange={e => updateProduct(selectedProductId, 'description', e.target.value)} /></label>
+                      {renderMediaPicker(selectProductImage, 'Foto do produto')}
+                      <button className="admin-primary full" onClick={() => saveConfig(config)}>Salvar produto</button>
+                    </div>
+                  </>
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'media' && (
+          <div className="admin-page-section">
+            <div className="admin-section-intro"><div><p className="eyebrow">BIBLIOTECA</p><h2>Arquivos da KEY.</h2><p>Arraste imagens ou vídeos para dentro da área abaixo. Eles ficam disponíveis para banners e produtos.</p></div></div>
+            <div className="admin-media-upload">
+              <div className="admin-upload-options"><label>Destino<select value={category} onChange={e => setCategory(e.target.value)}><option value="banner">Banner</option><option value="produto">Produto</option><option value="editorial">Editorial</option><option value="outro">Outro</option></select></label></div>
+              <label className={`admin-dropzone ${dragging ? 'is-dragging' : ''}`} onDragOver={e => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={e => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}>
+                <input type="file" multiple accept="image/*,video/*" onChange={e => { addFiles(e.target.files); e.target.value = '' }} />
+                <span className="admin-drop-icon">＋</span><strong>Arraste seus arquivos aqui</strong><span>ou clique para selecionar</span><small>JPG · PNG · WEBP · MP4 · múltiplos arquivos</small>
+              </label>
+            </div>
+            <div className="admin-media-head"><div><p className="eyebrow">ARQUIVOS</p><h3>{files.length} itens</h3></div></div>
+            {loading ? <div className="admin-empty">Carregando…</div> : files.length === 0 ? <div className="admin-empty">Sua biblioteca está vazia.</div> : <div className="admin-file-grid">{files.map(file => <article className="admin-file-card" key={file.id}><div className="admin-file-preview">{file.type.startsWith('video/') ? <video src={fileUrl(file)} muted controls /> : <img src={fileUrl(file)} alt={file.name} />}</div><div className="admin-file-info"><span className="admin-file-tag">{file.category}</span><strong title={file.name}>{file.name}</strong><small>{(file.size / 1024 / 1024).toFixed(2)} MB</small></div><button type="button" className="admin-delete" onClick={() => remove(file.id)}>Excluir</button></article>)}</div>}
+          </div>
+        )}
+
+        {tab === 'settings' && (
+          <div className="admin-page-section">
+            <div className="admin-section-intro"><div><p className="eyebrow">CONFIGURAÇÕES</p><h2>Detalhes da loja.</h2><p>Controle pequenas informações comerciais sem tocar no código.</p></div></div>
+            <div className="admin-settings-grid">
+              <section className="admin-card"><p className="eyebrow">COMUNICAÇÃO</p><h3>Barra superior</h3><label>Mensagem<input value={config.announcement} onChange={e => setConfig(current => ({ ...current, announcement: e.target.value }))} /></label><p className="admin-help">A mensagem exibida no topo da loja.</p></section>
+              <section className="admin-card"><p className="eyebrow">FRETE</p><h3>Frete grátis</h3><label>Pedido mínimo<input type="number" value={config.freeShippingThreshold} onChange={e => setConfig(current => ({ ...current, freeShippingThreshold: Number(e.target.value) }))} /></label><p className="admin-help">Acima deste valor o site mostra frete grátis.</p></section>
+            </div>
+            <button className="admin-primary" onClick={() => saveConfig(config)}>Salvar configurações</button>
+          </div>
+        )}
       </main>
 
       {notice && <div className="admin-toast">{notice}</div>}
@@ -635,7 +798,7 @@ function App() {
     try { return JSON.parse(localStorage.getItem('key-bag') || '[]') } catch { return [] }
   })
   const [inventory, setInventory] = useState(() => {
-    const base = Object.fromEntries(products.map(product => [product.id, product.sizes]))
+    const base = Object.fromEntries(publicProducts.map(product => [product.id, product.sizes || {}]))
     try {
       const saved = JSON.parse(localStorage.getItem('key-inventory') || 'null')
       return saved && typeof saved === 'object' ? { ...base, ...saved } : base
@@ -665,7 +828,7 @@ function App() {
     closeMenu()
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
-  const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)
+  const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)\n  const publicProducts = catalogProducts.map(product => {\n    const config = siteConfig.products?.[product.id]\n    return { ...product, ...(config || {}), image: config?.fileId ? (siteAssets[config.fileId] || config.image || product.image) : (config?.image || product.image) }\n  })
 
   const finishOrder = details => {
     const number = `KEY-${Date.now().toString().slice(-6)}`
@@ -721,7 +884,7 @@ function App() {
 
   return (
     <div className="site">
-      <div className="announcement">FREE SHIPPING ON ORDERS OVER R$ 499</div>
+      <div className="announcement">{siteConfig.announcement}</div>
 
       <header className="header">
         <button
@@ -785,7 +948,7 @@ function App() {
                 <a href="#shop">Ver tudo <span aria-hidden="true">→</span></a>
               </div>
               <div className="product-grid">
-                {products.map(product => <ProductCard key={product.id} product={product} onOpen={openProduct} />)}
+                {publicProducts.map(product => <ProductCard key={product.id} product={product} onOpen={openProduct} />)}
               </div>
             </section>
 
