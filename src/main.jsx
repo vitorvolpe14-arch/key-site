@@ -3,13 +3,13 @@ import ReactDOM from 'react-dom/client'
 import './styles.css'
 
 const products = [
-  { id: 1, name: 'Suite Set', price: 'R$ 389,00', category: 'Conjuntos', position: '0% 0%' },
-  { id: 2, name: 'Azure Set', price: 'R$ 429,00', category: 'Conjuntos', position: '25% 0%' },
+  { id: 1, name: 'Azure Set', price: 'R$ 429,00', category: 'Conjuntos', position: '0% 0%' },
+  { id: 2, name: 'Suite Set', price: 'R$ 389,00', category: 'Conjuntos', position: '25% 0%' },
   { id: 3, name: 'Capri Top', price: 'R$ 289,00', category: 'Blusas', position: '50% 0%' },
   { id: 4, name: 'Rouge Dress', price: 'R$ 499,00', category: 'Vestidos', position: '75% 0%' },
   { id: 5, name: 'Louvre Jumpsuit', price: 'R$ 479,00', category: 'Macacões', position: '100% 0%' },
-  { id: 6, name: 'Monaco Set', price: 'R$ 449,00', category: 'Conjuntos', position: '0% 100%' },
-  { id: 7, name: 'Riviera Set', price: 'R$ 529,00', category: 'Conjuntos', position: '25% 100%' },
+  { id: 6, name: 'Riviera Set', price: 'R$ 529,00', category: 'Conjuntos', position: '0% 100%' },
+  { id: 7, name: 'Monaco Set', price: 'R$ 449,00', category: 'Conjuntos', position: '25% 100%' },
   { id: 8, name: 'Milano Vest', price: 'R$ 329,00', category: 'Blusas', position: '50% 100%' },
   { id: 9, name: 'Paris Dots Set', price: 'R$ 429,00', category: 'Conjuntos', position: '75% 100%' },
   { id: 10, name: 'Palais Dress', price: 'R$ 459,00', category: 'Vestidos', position: '100% 100%' }
@@ -23,7 +23,7 @@ function ProductCard({ product }) {
         role="img"
         aria-label={product.name}
         style={{
-          backgroundImage: "url('/products-sprite.svg')",
+          backgroundImage: "url('/products-sprite.webp')",
           backgroundPosition: product.position
         }}
       />
