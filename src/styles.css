@@ -1167,3 +1167,101 @@ footer h4 {
     text-align: left;
   }
 }
+
+
+/* PHASE 6 — INVENTORY, COUPONS + UX */
+.product-card-button { overflow: hidden; }
+.stock-badge {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 2;
+  padding: 6px 8px;
+  background: var(--paper);
+  color: var(--deep);
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+.stock-badge.sold { background: var(--deep); color: #fff; }
+.size-grid button:disabled {
+  cursor: not-allowed;
+  opacity: .35;
+  text-decoration: line-through;
+  background: transparent;
+  color: var(--muted);
+}
+.quantity-control button:disabled,
+.mini-quantity button:disabled,
+.add-to-bag:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+.add-to-bag:disabled:hover { background: var(--deep); border-color: var(--deep); }
+.coupon-box {
+  padding: 18px 0 6px;
+  border-top: 1px solid var(--line);
+}
+.coupon-box > label {
+  display: block;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .13em;
+  margin-bottom: 9px;
+}
+.coupon-field {
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.coupon-field input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.coupon-field button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+.coupon-success {
+  display: block;
+  color: #4f6b57;
+  font-size: 8px;
+  margin-top: 7px;
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: var(--deep);
+  color: #fff;
+  padding: 12px 18px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  box-shadow: 0 8px 30px rgba(20,10,14,.18);
+  animation: toast-in .22s ease both;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (max-width: 760px) {
+  .stock-badge { left: 7px; top: 7px; }
+  .toast {
+    width: calc(100% - 36px);
+    text-align: center;
+    bottom: 18px;
+  }
+}
