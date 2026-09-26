@@ -576,23 +576,31 @@ function AdminPage() {
     localStorage.setItem(ADMIN_CONFIG, JSON.stringify(next))
 
     try {
-      // Atualiza os registros já criados no Supabase em vez de usar upsert.
-      // Isso evita que o PostgREST tente executar INSERT no fluxo do CMS.
+      // Publica cada banner e garante que o registro exista no servidor.
       for (let index = 0; index < (next.banners || []).length; index += 1) {
         const banner = next.banners[index]
-        const { error } = await supabase
+        const payload = {
+          id: banner.id,
+          title: banner.title || '',
+          subtitle: banner.subtitle || '',
+          cta: banner.cta || '',
+          image_path: banner.image || '',
+          enabled: banner.enabled !== false,
+          sort_order: index + 1
+        }
+
+        const { data, error } = await supabase
           .from('banners')
-          .update({
-            title: banner.title || '',
-            subtitle: banner.subtitle || '',
-            cta: banner.cta || '',
-            image_path: banner.image || '',
-            enabled: banner.enabled !== false,
-            sort_order: index + 1
-          })
+          .update(payload)
           .eq('id', banner.id)
+          .select('id')
 
         if (error) throw error
+
+        if (!data?.length) {
+          const { error: insertError } = await supabase.from('banners').insert(payload)
+          if (insertError && insertError.code !== '23505') throw insertError
+        }
       }
 
       const settings = [
@@ -601,12 +609,18 @@ function AdminPage() {
       ]
 
       for (const setting of settings) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('site_settings')
           .update({ value: setting.value })
           .eq('key', setting.key)
+          .select('key')
 
         if (error) throw error
+
+        if (!data?.length) {
+          const { error: insertError } = await supabase.from('site_settings').insert(setting)
+          if (insertError && insertError.code !== '23505') throw insertError
+        }
       }
 
       setNotice('Alterações publicadas no servidor.')
