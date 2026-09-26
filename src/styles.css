@@ -308,9 +308,21 @@ button { color: inherit; }
   z-index: -1;
 }
 .category-card:hover::before { transform: scale(1.04); }
-.category-dresses { background: linear-gradient(145deg,#ddc7ba,#8c5362); }
-.category-sets { background: linear-gradient(145deg,#b9a4a1,#3d1b25); }
-.category-tops { background: linear-gradient(145deg,#e3b5c6,#68183a); }
+.category-dresses {
+  background-image: linear-gradient(180deg, rgba(42,16,25,.03) 35%, rgba(42,16,25,.52) 100%), url("https://www.egyptianblue.com/cdn/shop/files/Long_black_Sequin_Dress_look_2.jpg?v=1741468282&width=1200");
+  background-size: cover;
+  background-position: center;
+}
+.category-sets {
+  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.55) 100%), url("https://fashn.ai/_next/image?dpl=dpl_BZdyhXS2J5wmVSaaW7fduGnDaMiA&q=80&url=%2Fproducts.webp&w=1200");
+  background-size: cover;
+  background-position: center;
+}
+.category-tops {
+  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.58) 100%), url("https://i.pinimg.com/originals/94/36/2e/94362eaf7378a9229df9a04d28cf179e.jpg");
+  background-size: cover;
+  background-position: center;
+}
 .category-card span {
   font-family: var(--serif);
   font-size: 30px;
