@@ -900,6 +900,8 @@ function App() {
     const config = siteConfig.products?.[product.id]
     return { ...product, ...(config || {}), image: config?.fileId ? (siteAssets[config.fileId] || config.image || product.image) : (config?.image || product.image) }
   })
+  const heroBanner = siteConfig.banners?.find(banner => banner.enabled) || siteConfig.banners?.[0] || {}
+  const heroImage = heroBanner.fileId ? (siteAssets[heroBanner.fileId] || heroBanner.image || '/key/banner-01.jpg') : (heroBanner.image || '/key/banner-01.jpg')
 
   const finishOrder = details => {
     const number = `KEY-${Date.now().toString().slice(-6)}`
@@ -999,12 +1001,12 @@ function App() {
       ) : (
         <>
           <main>
-            <section className="hero">
+            <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.82) 22%, rgba(255,255,255,.24) 48%, rgba(255,255,255,0) 72%), url("${heroImage}")` }}>
               <div className="hero-copy">
                 <p className="eyebrow">KEY / WOMEN'S WEAR</p>
-                <h1>Wear your<br /><em>key</em> piece.</h1>
-                <p className="hero-text">Uma seleção feminina pensada para marcar presença.</p>
-                <a className="button" href="#new">Ver coleção</a>
+                <h1>{heroBanner.title || 'Wear your'}<br /><em>key</em> piece.</h1>
+                <p className="hero-text">{heroBanner.subtitle || 'Uma seleção feminina pensada para marcar presença.'}</p>
+                <a className="button" href="#new">{heroBanner.cta || 'Ver coleção'}</a>
               </div>
               <div className="hero-mark" aria-hidden="true">K</div>
             </section>
