@@ -829,11 +829,73 @@ function AdminPage() {
   )
 }
 
+
+const categoryPages = {
+  vestidos: {
+    label: 'Vestidos',
+    eyebrow: 'KEY / VESTIDOS',
+    title: 'Vestidos',
+    intro: 'Silhuetas pensadas para marcar presença, do primeiro olhar ao último detalhe.'
+  },
+  conjuntos: {
+    label: 'Conjuntos',
+    eyebrow: 'KEY / CONJUNTOS',
+    title: 'Conjuntos',
+    intro: 'Proporções coordenadas para criar looks completos com personalidade.'
+  },
+  blusas: {
+    label: 'Blusas',
+    eyebrow: 'KEY / BLUSAS',
+    title: 'Blusas',
+    intro: 'Peças que transformam a composição e dão o tom ao seu guarda-roupa.'
+  }
+}
+
+function CategoryPage({ category, products: catalog, inventory, onOpen, onBack }) {
+  const page = categoryPages[category] || categoryPages.conjuntos
+  const items = catalog.filter(product => product.category.toLowerCase() === page.label.toLowerCase())
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [category])
+
+  return (
+    <main className="category-page">
+      <div className="category-page-top">
+        <button className="back-link" type="button" onClick={onBack}>← Voltar para a loja</button>
+      </div>
+
+      <section className="category-page-hero">
+        <div>
+          <p className="eyebrow">{page.eyebrow}</p>
+          <h1>{page.title}</h1>
+          <p>{page.intro}</p>
+        </div>
+        <span className="category-page-count">{items.length} {items.length === 1 ? 'peça' : 'peças'}</span>
+      </section>
+
+      <section className="category-page-products">
+        {items.length > 0 ? (
+          <div className="product-grid">
+            {items.map(product => <ProductCard key={product.id} product={product} inventory={inventory} onOpen={onOpen} />)}
+          </div>
+        ) : (
+          <div className="category-empty">Nenhuma peça disponível nesta categoria.</div>
+        )}
+      </section>
+    </main>
+  )
+}
+
 function App() {
   if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') return <AdminPage />
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
+  const [categoryView, setCategoryView] = useState(() => {
+    const value = new URLSearchParams(window.location.search).get('categoria')
+    return categoryPages[value] ? value : ''
+  })
   const [bagOpen, setBagOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [confirmation, setConfirmation] = useState(() => {
@@ -926,8 +988,36 @@ function App() {
 
   const openProduct = product => {
     setSelectedProduct(product)
+    setCategoryView('')
     closeMenu()
   }
+
+  const openCategory = category => {
+    if (!categoryPages[category]) return
+    setSelectedProduct(null)
+    setCheckoutOpen(false)
+    setCategoryView(category)
+    closeMenu()
+    window.history.pushState({}, '', `/?categoria=${category}`)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+
+  const backToHome = () => {
+    setSelectedProduct(null)
+    setCategoryView('')
+    window.history.pushState({}, '', '/')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const value = new URLSearchParams(window.location.search).get('categoria')
+      setCategoryView(categoryPages[value] ? value : '')
+      setSelectedProduct(null)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   const addToBag = (product, size, quantity) => {
     if (!size) return
@@ -997,18 +1087,19 @@ function App() {
       ) : checkoutOpen ? (
         <CheckoutPage items={bag} onBack={() => { setCheckoutOpen(false); setBagOpen(true) }} onComplete={finishOrder} />
       ) : selectedProduct ? (
-        <ProductPage product={selectedProduct} inventory={inventory} onBack={() => setSelectedProduct(null)} onAdd={addToBag} />
+        <ProductPage product={selectedProduct} inventory={inventory} onBack={() => categoryView ? setSelectedProduct(null) : backToHome()} onAdd={addToBag} />
+      ) : categoryView ? (
+        <CategoryPage category={categoryView} products={publicProducts} inventory={inventory} onOpen={openProduct} onBack={backToHome} />
       ) : (
         <>
           <main>
             <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.82) 22%, rgba(255,255,255,.24) 48%, rgba(255,255,255,0) 72%), url("${heroImage}")` }}>
               <div className="hero-copy">
                 <p className="eyebrow">KEY / WOMEN'S WEAR</p>
-                <h1>{heroBanner.title || 'Wear your'}<br /><em>key</em> piece.</h1>
+                <h1>{heroBanner.title || 'Wear your key piece.'}</h1>
                 <p className="hero-text">{heroBanner.subtitle || 'Uma seleção feminina pensada para marcar presença.'}</p>
                 <a className="button" href="#new">{heroBanner.cta || 'Ver coleção'}</a>
               </div>
-              <div className="hero-mark" aria-hidden="true">K</div>
             </section>
 
             <div className="ticker" aria-label="Mensagem da coleção">
@@ -1031,9 +1122,9 @@ function App() {
                 <h2>Find your<br /><em>key</em>.</h2>
                 <a className="text-link" href="#new">Ver coleção completa <span aria-hidden="true">→</span></a>
               </div>
-              <a className="category-card category-dresses" href="#new"><span>Vestidos</span></a>
-              <a className="category-card category-sets" href="#new"><span>Conjuntos</span></a>
-              <a className="category-card category-tops" href="#new"><span>Blusas</span></a>
+              <button className="category-card category-dresses" type="button" onClick={() => openCategory('vestidos')}><span>Vestidos</span><small>Ver categoria →</small></button>
+              <button className="category-card category-sets" type="button" onClick={() => openCategory('conjuntos')}><span>Conjuntos</span><small>Ver categoria →</small></button>
+              <button className="category-card category-tops" type="button" onClick={() => openCategory('blusas')}><span>Blusas</span><small>Ver categoria →</small></button>
             </section>
 
             <section className="editorial" id="editorial">
