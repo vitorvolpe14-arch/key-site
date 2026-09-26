@@ -3,16 +3,16 @@ import ReactDOM from 'react-dom/client'
 import './styles.css'
 
 const products = [
-  { id: 1, name: 'Azure Set', price: 'R$ 429,00', category: 'Conjuntos', image: '/products/01-azure-set.webp' },
-  { id: 2, name: 'Suite Set', price: 'R$ 389,00', category: 'Conjuntos', image: '/products/02-suite-set.webp' },
-  { id: 3, name: 'Capri Top', price: 'R$ 289,00', category: 'Blusas', image: '/products/03-capri-top.webp' },
-  { id: 4, name: 'Rouge Dress', price: 'R$ 499,00', category: 'Vestidos', image: '/products/04-rouge-dress.webp' },
-  { id: 5, name: 'Louvre Jumpsuit', price: 'R$ 479,00', category: 'Macacões', image: '/products/05-louvre-jumpsuit.webp' },
-  { id: 6, name: 'Riviera Set', price: 'R$ 529,00', category: 'Conjuntos', image: '/products/06-riviera-set.webp' },
-  { id: 7, name: 'Monaco Set', price: 'R$ 449,00', category: 'Conjuntos', image: '/products/07-monaco-set.webp' },
-  { id: 8, name: 'Milano Vest', price: 'R$ 329,00', category: 'Blusas', image: '/products/08-milano-vest.webp' },
-  { id: 9, name: 'Paris Dots Set', price: 'R$ 429,00', category: 'Conjuntos', image: '/products/09-paris-dots-set.webp' },
-  { id: 10, name: 'Palais Dress', price: 'R$ 459,00', category: 'Vestidos', image: '/products/10-palais-dress.webp' }
+  { id: 1, name: 'Azure Set', price: 'R$ 429,00', category: 'Conjuntos', image: '/key/jeans.jpeg' },
+  { id: 2, name: 'Suite Set', price: 'R$ 389,00', category: 'Conjuntos', image: null },
+  { id: 3, name: 'Capri Top', price: 'R$ 289,00', category: 'Blusas', image: '/leonor.jpeg' },
+  { id: 4, name: 'Rouge Dress', price: 'R$ 499,00', category: 'Vestidos', image: '/key/blusa%20vermelha.jpeg' },
+  { id: 5, name: 'Louvre Jumpsuit', price: 'R$ 479,00', category: 'Macacões', image: '/key/marrom.jpeg' },
+  { id: 6, name: 'Riviera Set', price: 'R$ 529,00', category: 'Conjuntos', image: '/key/blazer.jpeg' },
+  { id: 7, name: 'Monaco Set', price: 'R$ 449,00', category: 'Conjuntos', image: '/key/conjunto.jpeg' },
+  { id: 8, name: 'Milano Vest', price: 'R$ 329,00', category: 'Blusas', image: '/key/top%20vermelho.jpeg' },
+  { id: 9, name: 'Paris Dots Set', price: 'R$ 429,00', category: 'Conjuntos', image: '/black.jpeg' },
+  { id: 10, name: 'Palais Dress', price: 'R$ 459,00', category: 'Vestidos', image: '/poair.jpeg' }
 ]
 
 const navItems = [
@@ -26,15 +26,20 @@ function ProductCard({ product }) {
   return (
     <article className="product-card">
       <a className="product-image" href="#shop" aria-label={`Ver ${product.name}`}>
-        <img
-          src={product.image}
-          alt={product.name}
-          loading="lazy"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-            e.currentTarget.parentElement.classList.add('image-missing')
-          }}
-        />
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+              e.currentTarget.parentElement.classList.add('image-missing')
+            }}
+          />
+        ) : (
+          <span className="image-placeholder" aria-label="Foto em breve">Foto em breve</span>
+        )}
         <span className="product-category">{product.category}</span>
       </a>
       <div className="product-info">
