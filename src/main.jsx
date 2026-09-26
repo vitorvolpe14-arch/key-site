@@ -798,7 +798,7 @@ function App() {
     try { return JSON.parse(localStorage.getItem('key-bag') || '[]') } catch { return [] }
   })
   const [inventory, setInventory] = useState(() => {
-    const base = Object.fromEntries(publicProducts.map(product => [product.id, product.sizes || {}]))
+    const base = Object.fromEntries(products.map(product => [product.id, product.sizes || {}]))
     try {
       const saved = JSON.parse(localStorage.getItem('key-inventory') || 'null')
       return saved && typeof saved === 'object' ? { ...base, ...saved } : base
