@@ -1081,3 +1081,89 @@ footer h4 {
   .confirmation-page { padding: 55px 18px; }
   .confirmation-summary { grid-template-columns: 1fr; gap: 17px; }
 }
+
+
+/* PHASE 5 — SHIPPING + ORDER DETAILS */
+.cep-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.cep-field input { flex: 1; min-width: 0; }
+.cep-field button {
+  height: 34px;
+  border: 0;
+  border-bottom: 1px solid var(--deep);
+  background: transparent;
+  padding: 0 2px;
+  cursor: pointer;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+.field-error {
+  display: block;
+  color: var(--wine);
+  font-size: 8px;
+  margin-top: 7px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.shipping-note {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.6;
+  margin: 13px 0 0;
+}
+.confirmation-delivery {
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 20px;
+  margin-bottom: 20px;
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+.confirmation-delivery div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+.confirmation-delivery span,
+.confirmation-products > span {
+  color: var(--muted);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .13em;
+}
+.confirmation-delivery strong {
+  max-width: 65%;
+  text-align: right;
+  font-size: 9px;
+  font-weight: 500;
+}
+.confirmation-products {
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 20px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+.confirmation-products > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 11px;
+  font-size: 9px;
+}
+.confirmation-products strong { font-weight: 500; }
+
+@media (max-width: 760px) {
+  .cep-field button { padding-left: 8px; }
+  .confirmation-delivery div {
+    display: grid;
+    gap: 5px;
+  }
+  .confirmation-delivery strong {
+    max-width: none;
+    text-align: left;
+  }
+}
