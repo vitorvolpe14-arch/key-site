@@ -436,7 +436,194 @@ function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout, inventory
   )
 }
 
+
+const ADMIN_DB = 'key-admin-assets'
+const ADMIN_STORE = 'files'
+
+function adminOpenDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(ADMIN_DB, 1)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(ADMIN_STORE)) db.createObjectStore(ADMIN_STORE, { keyPath: 'id' })
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function adminListFiles() {
+  const db = await adminOpenDB()
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(ADMIN_STORE, 'readonly').objectStore(ADMIN_STORE).getAll()
+    request.onsuccess = () => resolve(request.result.sort((a, b) => b.createdAt - a.createdAt))
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function adminSaveFiles(files) {
+  const db = await adminOpenDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ADMIN_STORE, 'readwrite')
+    files.forEach(file => tx.objectStore(ADMIN_STORE).put(file))
+    tx.oncomplete = resolve
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+async function adminDeleteFile(id) {
+  const db = await adminOpenDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ADMIN_STORE, 'readwrite')
+    tx.objectStore(ADMIN_STORE).delete(id)
+    tx.oncomplete = resolve
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+function AdminPage() {
+  const [files, setFiles] = useState([])
+  const [dragging, setDragging] = useState(false)
+  const [category, setCategory] = useState('banner')
+  const [notice, setNotice] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    adminListFiles().then(setFiles).catch(() => setNotice('Não foi possível carregar a biblioteca.')).finally(() => setLoading(false))
+  }, [])
+
+  const addFiles = async selected => {
+    const accepted = Array.from(selected).filter(file => file.type.startsWith('image/') || file.type.startsWith('video/'))
+    if (!accepted.length) {
+      setNotice('Selecione imagens ou vídeos.')
+      return
+    }
+
+    const newFiles = accepted.map(file => ({
+      id: crypto.randomUUID(),
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      category,
+      createdAt: Date.now(),
+      blob: file
+    }))
+
+    try {
+      await adminSaveFiles(newFiles)
+      setFiles(current => [...newFiles, ...current])
+      setNotice(`${newFiles.length} arquivo${newFiles.length > 1 ? 's' : ''} adicionado${newFiles.length > 1 ? 's' : ''} à biblioteca.`)
+    } catch {
+      setNotice('Não foi possível salvar os arquivos.')
+    }
+  }
+
+  const remove = async id => {
+    await adminDeleteFile(id)
+    setFiles(current => current.filter(file => file.id !== id))
+    setNotice('Arquivo removido.')
+  }
+
+  const leave = () => {
+    window.location.href = '/'
+  }
+
+  return (
+    <div className="admin-page">
+      <header className="admin-header">
+        <div>
+          <p className="admin-kicker">KEY / MANAGEMENT</p>
+          <h1>Gerenciador</h1>
+        </div>
+        <button type="button" className="admin-back" onClick={leave}>Voltar para a loja →</button>
+      </header>
+
+      <main className="admin-main">
+        <section className="admin-upload-section">
+          <div className="admin-section-heading">
+            <div>
+              <p className="eyebrow">BIBLIOTECA DE ARQUIVOS</p>
+              <h2>Adicionar conteúdo</h2>
+            </div>
+            <label className="admin-select">
+              <span>Destino</span>
+              <select value={category} onChange={e => setCategory(e.target.value)}>
+                <option value="banner">Banner</option>
+                <option value="produto">Produto</option>
+                <option value="editorial">Editorial</option>
+                <option value="outro">Outro</option>
+              </select>
+            </label>
+          </div>
+
+          <label
+            className={`admin-dropzone ${dragging ? 'is-dragging' : ''}`}
+            onDragOver={e => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={e => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}
+          >
+            <input
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              onChange={e => { addFiles(e.target.files); e.target.value = '' }}
+            />
+            <span className="admin-drop-icon">＋</span>
+            <strong>Arraste os arquivos aqui</strong>
+            <span>ou clique para selecionar do computador</span>
+            <small>Imagens e vídeos · múltiplos arquivos permitidos</small>
+          </label>
+        </section>
+
+        <section className="admin-library">
+          <div className="admin-library-head">
+            <div>
+              <p className="eyebrow">SEUS ARQUIVOS</p>
+              <h2>Biblioteca</h2>
+            </div>
+            <span>{files.length} arquivo{files.length !== 1 ? 's' : ''}</span>
+          </div>
+
+          {loading ? (
+            <div className="admin-empty">Carregando biblioteca…</div>
+          ) : files.length === 0 ? (
+            <div className="admin-empty">Nenhum arquivo adicionado ainda.</div>
+          ) : (
+            <div className="admin-file-grid">
+              {files.map(file => {
+                const src = URL.createObjectURL(file.blob)
+                return (
+                  <article className="admin-file-card" key={file.id}>
+                    <div className="admin-file-preview">
+                      {file.type.startsWith('video/') ? <video src={src} muted controls preload="metadata" /> : <img src={src} alt={file.name} />}
+                    </div>
+                    <div className="admin-file-info">
+                      <span className="admin-file-tag">{file.category}</span>
+                      <strong title={file.name}>{file.name}</strong>
+                      <small>{(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                    </div>
+                    <button type="button" className="admin-delete" onClick={() => remove(file.id)}>Excluir</button>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="admin-note">
+          <strong>Como funciona nesta etapa</strong>
+          <p>Os arquivos ficam salvos na biblioteca deste navegador, sem banco de dados ou checkout externo. A próxima camada pode publicar essa biblioteca no armazenamento do site para que os arquivos escolhidos aqui apareçam para todos os visitantes.</p>
+        </section>
+      </main>
+
+      {notice && <div className="admin-toast">{notice}</div>}
+    </div>
+  )
+}
+
 function App() {
+  if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') return <AdminPage />
+
   const [menuOpen, setMenuOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [bagOpen, setBagOpen] = useState(false)
