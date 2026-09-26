@@ -571,10 +571,35 @@ function AdminPage() {
     adminListFiles().then(setFiles).catch(() => setNotice('Não foi possível carregar a biblioteca.')).finally(() => setLoading(false))
   }, [])
 
-  const saveConfig = next => {
+  const saveConfig = async next => {
     setConfig(next)
     localStorage.setItem(ADMIN_CONFIG, JSON.stringify(next))
-    setNotice('Alterações publicadas neste navegador.')
+
+    try {
+      const bannerRows = (next.banners || []).map((banner, index) => ({
+        id: banner.id,
+        title: banner.title,
+        subtitle: banner.subtitle,
+        cta: banner.cta,
+        image_path: banner.image || '',
+        enabled: banner.enabled !== false,
+        sort_order: index + 1
+      }))
+      if (bannerRows.length) {
+        const { error: bannerError } = await supabase.from('banners').upsert(bannerRows, { onConflict: 'id' })
+        if (bannerError) throw bannerError
+      }
+
+      await supabase.from('site_settings').upsert([
+        { key: 'announcement', value: next.announcement || '' },
+        { key: 'free_shipping_threshold', value: Number(next.freeShippingThreshold || 0) }
+      ], { onConflict: 'key' })
+
+      setNotice('Alterações publicadas.')
+    } catch (error) {
+      console.error('KEY CMS publish error', error)
+      setNotice('Salvo localmente, mas não foi possível publicar no servidor.')
+    }
   }
 
   const addFiles = async selected => {
@@ -584,17 +609,34 @@ function AdminPage() {
       return
     }
 
-    const newFiles = accepted.map(file => ({
-      id: crypto.randomUUID(),
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      category,
-      createdAt: Date.now(),
-      blob: file
-    }))
+    const newFiles = []
 
     try {
+      for (const file of accepted) {
+        const id = crypto.randomUUID()
+        const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-')
+        const storagePath = `admin/${id}-${safeName}`
+        const { error: uploadError } = await supabase.storage
+          .from('key-assets')
+          .upload(storagePath, file, { upsert: true, contentType: file.type })
+
+        if (uploadError) throw uploadError
+
+        const { data: publicData } = supabase.storage.from('key-assets').getPublicUrl(storagePath)
+
+        newFiles.push({
+          id,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          category,
+          createdAt: Date.now(),
+          blob: file,
+          storagePath,
+          storageUrl: publicData.publicUrl
+        })
+      }
+
       await adminSaveFiles(newFiles)
       setFiles(current => [...newFiles, ...current])
       setNotice(`${newFiles.length} arquivo${newFiles.length > 1 ? 's' : ''} adicionado${newFiles.length > 1 ? 's' : ''} à biblioteca.`)
@@ -616,13 +658,16 @@ function AdminPage() {
   }
 
   const fileUrl = file => {
+    if (file.storageUrl) return file.storageUrl
     try { return URL.createObjectURL(file.blob) } catch { return '' }
   }
 
   const chooseBannerImage = (bannerId, file) => {
     const next = {
       ...config,
-      banners: config.banners.map(b => b.id === bannerId ? { ...b, fileId: file.id, image: '' } : b)
+      banners: config.banners.map(b => b.id === bannerId
+        ? { ...b, fileId: file.id, image: file.storageUrl || file.image || '' }
+        : b)
     }
     saveConfig(next)
   }
