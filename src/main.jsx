@@ -828,7 +828,11 @@ function App() {
     closeMenu()
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
-  const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)\n  const publicProducts = catalogProducts.map(product => {\n    const config = siteConfig.products?.[product.id]\n    return { ...product, ...(config || {}), image: config?.fileId ? (siteAssets[config.fileId] || config.image || product.image) : (config?.image || product.image) }\n  })
+  const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)
+  const publicProducts = catalogProducts.map(product => {
+    const config = siteConfig.products?.[product.id]
+    return { ...product, ...(config || {}), image: config?.fileId ? (siteAssets[config.fileId] || config.image || product.image) : (config?.image || product.image) }
+  })
 
   const finishOrder = details => {
     const number = `KEY-${Date.now().toString().slice(-6)}`
