@@ -576,29 +576,43 @@ function AdminPage() {
     localStorage.setItem(ADMIN_CONFIG, JSON.stringify(next))
 
     try {
-      const bannerRows = (next.banners || []).map((banner, index) => ({
-        id: banner.id,
-        title: banner.title,
-        subtitle: banner.subtitle,
-        cta: banner.cta,
-        image_path: banner.image || '',
-        enabled: banner.enabled !== false,
-        sort_order: index + 1
-      }))
-      if (bannerRows.length) {
-        const { error: bannerError } = await supabase.from('banners').upsert(bannerRows, { onConflict: 'id' })
-        if (bannerError) throw bannerError
+      // Atualiza os registros já criados no Supabase em vez de usar upsert.
+      // Isso evita que o PostgREST tente executar INSERT no fluxo do CMS.
+      for (let index = 0; index < (next.banners || []).length; index += 1) {
+        const banner = next.banners[index]
+        const { error } = await supabase
+          .from('banners')
+          .update({
+            title: banner.title || '',
+            subtitle: banner.subtitle || '',
+            cta: banner.cta || '',
+            image_path: banner.image || '',
+            enabled: banner.enabled !== false,
+            sort_order: index + 1
+          })
+          .eq('id', banner.id)
+
+        if (error) throw error
       }
 
-      await supabase.from('site_settings').upsert([
+      const settings = [
         { key: 'announcement', value: next.announcement || '' },
         { key: 'free_shipping_threshold', value: Number(next.freeShippingThreshold || 0) }
-      ], { onConflict: 'key' })
+      ]
 
-      setNotice('Alterações publicadas.')
+      for (const setting of settings) {
+        const { error } = await supabase
+          .from('site_settings')
+          .update({ value: setting.value })
+          .eq('key', setting.key)
+
+        if (error) throw error
+      }
+
+      setNotice('Alterações publicadas no servidor.')
     } catch (error) {
       console.error('KEY CMS publish error', error)
-      setNotice('Salvo localmente, mas não foi possível publicar no servidor.')
+      setNotice(`Erro ao publicar: ${error?.message || 'verifique a conexão com o servidor.'}`)
     }
   }
 
