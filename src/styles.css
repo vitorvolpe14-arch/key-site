@@ -1005,3 +1005,79 @@ footer h4 {
   .address-grid label:first-child { grid-column: auto; }
   .payment-options { grid-template-columns: 1fr 1fr; }
 }
+
+
+/* PHASE 4 — ORDER CONFIRMATION */
+.confirmation-page {
+  min-height: calc(100vh - 106px);
+  display: grid;
+  place-items: center;
+  padding: 70px 20px;
+}
+.confirmation-card {
+  width: min(520px, 100%);
+  text-align: center;
+}
+.confirmation-mark {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--deep);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 25px auto;
+  font-size: 18px;
+}
+.confirmation-card h1 {
+  font-family: var(--serif);
+  font-size: clamp(52px, 7vw, 76px);
+  font-weight: 400;
+  line-height: .9;
+  letter-spacing: -.05em;
+  margin: 0 0 18px;
+}
+.confirmation-text {
+  max-width: 370px;
+  margin: 0 auto 28px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.confirmation-number {
+  border-top: 1px solid var(--deep);
+  border-bottom: 1px solid var(--line);
+  padding: 17px 0;
+  margin-bottom: 20px;
+}
+.confirmation-number span,
+.confirmation-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .13em;
+  margin-bottom: 7px;
+}
+.confirmation-number strong {
+  font-size: 13px;
+  letter-spacing: .08em;
+  font-weight: 500;
+}
+.confirmation-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 20px;
+  margin-bottom: 28px;
+}
+.confirmation-summary strong {
+  font-size: 10px;
+  font-weight: 500;
+}
+.confirmation-card .button { min-width: 190px; border: 0; }
+
+@media (max-width: 760px) {
+  .confirmation-page { padding: 55px 18px; }
+  .confirmation-summary { grid-template-columns: 1fr; gap: 17px; }
+}
