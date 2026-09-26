@@ -279,7 +279,8 @@ button { color: inherit; }
   display: grid;
   grid-template-columns: 1.2fr repeat(3,1fr);
   gap: 12px;
-  padding: 0 4vw 108px;
+  padding: 72px 4vw 108px;
+  background: #ead8d7;
 }
 .category-intro { padding: 35px 20px 20px 0; }
 .category-intro h2 {
