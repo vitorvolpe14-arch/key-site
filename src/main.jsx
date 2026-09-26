@@ -936,6 +936,7 @@ function App() {
             return {
               ...fallback,
               id: row.legacy_id,
+              dbId: row.id,
               name: row.name || fallback.name,
               price: Number(row.price ?? fallback.price ?? 0),
               description: row.description || fallback.description || '',
@@ -1053,19 +1054,19 @@ function App() {
         .from('orders')
         .insert({
           order_number: number,
-          customer_name: details.name,
-          customer_email: details.email,
-          customer_phone: details.phone,
-          cep: details.cep,
-          address: details.address,
-          address_number: details.number,
-          city: details.city,
-          state: details.state,
-          payment_method: details.payment,
-          subtotal: details.subtotal,
+          customer_name: details.shipping?.name || '',
+          customer_email: details.shipping?.email || '',
+          customer_phone: details.shipping?.phone || '',
+          cep: details.shipping?.cep || '',
+          address: details.shipping?.address || '',
+          address_number: details.shipping?.number || '',
+          city: details.shipping?.city || '',
+          state: details.shipping?.state || '',
+          payment_method: details.payment || 'pix',
+          subtotal: details.subtotal || 0,
           shipping: details.shippingCost || 0,
           discount: details.discount || 0,
-          total: details.total,
+          total: details.total || 0,
           coupon: details.coupon || null,
           status: 'pending'
         })
@@ -1076,18 +1077,16 @@ function App() {
 
       const orderItems = bag.map(item => ({
         order_id: insertedOrder.id,
-        product_id: null,
+        product_id: item.dbId || null,
         product_name: item.name,
         size: item.size,
         quantity: item.quantity,
         unit_price: item.price
       }))
 
-      // Product UUIDs are resolved server-side in the next backend step.
-      // For now, persist the order header and keep the local item copy as the fallback.
-      if (orderItems.length) {
-        const safeItems = orderItems.map(({ product_id, ...item }) => item)
-        await supabase.from('order_items').insert(safeItems)
+      if (orderItems.length && orderItems.every(item => item.product_id)) {
+        const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
+        if (itemsError) throw itemsError
       }
     } catch (error) {
       console.warn('KEY order backend sync unavailable; local order retained.', error)
