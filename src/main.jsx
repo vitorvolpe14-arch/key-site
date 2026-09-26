@@ -46,11 +46,13 @@ function ProductImage({ product, className = '' }) {
 }
 
 function ProductCard({ product, onOpen }) {
+  const totalStock = Object.values(product.sizes || {}).reduce((sum, value) => sum + value, 0)
   return (
     <article className="product-card">
       <button className="product-card-button" type="button" onClick={() => onOpen(product)}>
         <ProductImage product={product} />
         <span className="product-category">{product.category}</span>
+        {totalStock === 0 ? <span className="stock-badge sold">Esgotado</span> : totalStock <= 3 ? <span className="stock-badge">Últimas unidades</span> : null}
       </button>
       <div className="product-info">
         <h3>{product.name}</h3>
@@ -60,9 +62,11 @@ function ProductCard({ product, onOpen }) {
   )
 }
 
-function ProductPage({ product, onBack, onAdd }) {
+function ProductPage({ product, onBack, onAdd, inventory }) {
   const [size, setSize] = useState('')
   const [quantity, setQuantity] = useState(1)
+  const stock = inventory[product.id] || product.sizes || {}
+  const available = size ? (stock[size] || 0) : 0
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -94,9 +98,10 @@ function ProductPage({ product, onBack, onAdd }) {
                   key={item}
                   type="button"
                   className={size === item ? 'selected' : ''}
-                  onClick={() => setSize(item)}
+                  disabled={(stock[item] || 0) <= 0}
+                  onClick={() => { setSize(item); setQuantity(1) }}
                 >
-                  {item}
+                  {item}{(stock[item] || 0) <= 0 ? ' — indisponível' : ''}
                 </button>
               ))}
             </div>
@@ -107,18 +112,19 @@ function ProductPage({ product, onBack, onAdd }) {
             <div className="quantity-control">
               <button type="button" onClick={() => setQuantity(q => Math.max(1, q - 1))}>−</button>
               <span>{quantity}</span>
-              <button type="button" onClick={() => setQuantity(q => q + 1)}>+</button>
+              <button type="button" disabled={!available || quantity >= available} onClick={() => setQuantity(q => Math.min(available, q + 1))}>+</button>
             </div>
           </div>
 
           <button
             className="add-to-bag"
             type="button"
+            disabled={!size || available === 0}
             onClick={() => onAdd(product, size, quantity)}
           >
-            {size ? 'Adicionar à sacola' : 'Selecione um tamanho'}
+            {!size ? 'Selecione um tamanho' : available === 0 ? 'Tamanho indisponível' : 'Adicionar à sacola'}
           </button>
-          <p className="product-note">Envio calculado no checkout.</p>
+          <p className="product-note">{size && available > 0 && available <= 3 ? `Restam ${available} unidade${available > 1 ? 's' : ''} neste tamanho.` : 'Envio calculado no checkout.'}</p>
         </div>
       </div>
     </main>
@@ -133,6 +139,9 @@ function CheckoutPage({ items, onBack, onComplete }) {
   const [shippingLabel, setShippingLabel] = useState('Informe o CEP')
   const [cepLoading, setCepLoading] = useState(false)
   const [cepError, setCepError] = useState('')
+  const [coupon, setCoupon] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [couponError, setCouponError] = useState('')
 
   const update = e => {
     const { name, value } = e.target
@@ -203,7 +212,27 @@ function CheckoutPage({ items, onBack, onComplete }) {
     }
   }
 
-  const total = subtotal + (shippingCost || 0)
+  const discount = appliedCoupon?.type === 'percent' ? subtotal * appliedCoupon.value : 0
+  const couponShippingFree = appliedCoupon?.type === 'freeShipping'
+  const freeShipping = subtotal >= 499
+  const effectiveShipping = freeShipping || couponShippingFree ? 0 : (shippingCost || 0)
+  const total = Math.max(0, subtotal - discount + effectiveShipping)
+
+  const applyCoupon = () => {
+    const code = coupon.trim().toUpperCase()
+    const coupons = {
+      KEY10: { code: 'KEY10', type: 'percent', value: 0.10, label: '10% de desconto' },
+      KEYFRETE: { code: 'KEYFRETE', type: 'freeShipping', value: 0, label: 'Frete grátis' }
+    }
+    const found = coupons[code]
+    if (!found) {
+      setAppliedCoupon(null)
+      setCouponError('Cupom inválido.')
+      return
+    }
+    setAppliedCoupon(found)
+    setCouponError('')
+  }
 
   const complete = e => {
     e.preventDefault()
@@ -214,8 +243,10 @@ function CheckoutPage({ items, onBack, onComplete }) {
       shipping,
       payment,
       subtotal,
-      shippingCost,
-      shippingLabel,
+      shippingCost: effectiveShipping,
+      shippingLabel: effectiveShipping === 0 ? 'Grátis' : shippingLabel,
+      discount,
+      coupon: appliedCoupon?.code || null,
       total
     })
   }
@@ -292,8 +323,18 @@ function CheckoutPage({ items, onBack, onComplete }) {
               </div>
             ))}
           </div>
+          <div className="coupon-box">
+            <label htmlFor="coupon">Cupom de desconto</label>
+            <div className="coupon-field">
+              <input id="coupon" value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} placeholder="Digite seu cupom" />
+              <button type="button" onClick={applyCoupon}>Aplicar</button>
+            </div>
+            {couponError && <small className="field-error">{couponError}</small>}
+            {appliedCoupon && <small className="coupon-success">{appliedCoupon.code} aplicado — {appliedCoupon.label}</small>}
+          </div>
           <div className="checkout-total"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
-          <div className="checkout-total muted"><span>Frete</span><strong>{shippingCost === null ? shippingLabel : money(shippingCost)}</strong></div>
+          {discount > 0 && <div className="checkout-total muted"><span>Desconto</span><strong>− {money(discount)}</strong></div>}
+          <div className="checkout-total muted"><span>Frete</span><strong>{freeShipping || couponShippingFree ? 'Grátis' : shippingCost === null ? shippingLabel : money(shippingCost)}</strong></div>
           <div className="checkout-total grand"><span>Total</span><strong>{money(total)}</strong></div>
           <button className="button checkout-final" type="submit">Revisar pedido</button>
           <p className="checkout-secure">Nenhum pagamento será realizado nesta etapa.</p>
@@ -319,6 +360,7 @@ function OrderConfirmation({ order, onContinue }) {
           <div><span>Cliente</span><strong>{order.shipping.name}</strong></div>
           <div><span>Pagamento</span><strong>{order.payment === 'pix' ? 'Pix' : 'Cartão'}</strong></div>
           <div><span>Total</span><strong>{money(order.total)}</strong></div>
+          {order.discount > 0 && <div><span>Desconto</span><strong>− {money(order.discount)}</strong></div>}
         </div>
         <div className="confirmation-delivery">
           <div><span>Entrega</span><strong>{order.shipping.address}, {order.shipping.number}</strong></div>
@@ -336,7 +378,7 @@ function OrderConfirmation({ order, onContinue }) {
     </main>
   )
 }
-function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout }) {
+function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout, inventory }) {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   return (
@@ -374,7 +416,7 @@ function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout }) {
                       <div className="mini-quantity">
                         <button onClick={() => onQuantity(item.key, item.quantity - 1)}>−</button>
                         <span>{item.quantity}</span>
-                        <button onClick={() => onQuantity(item.key, item.quantity + 1)}>+</button>
+                        <button disabled={item.quantity >= ((inventory[item.id] || {})[item.size] || 0)} onClick={() => onQuantity(item.key, item.quantity + 1)}>+</button>
                       </div>
                       <strong>{money(item.price * item.quantity)}</strong>
                     </div>
@@ -405,10 +447,28 @@ function App() {
   const [bag, setBag] = useState(() => {
     try { return JSON.parse(localStorage.getItem('key-bag') || '[]') } catch { return [] }
   })
+  const [inventory, setInventory] = useState(() => {
+    const base = Object.fromEntries(products.map(product => [product.id, product.sizes]))
+    try {
+      const saved = JSON.parse(localStorage.getItem('key-inventory') || 'null')
+      return saved && typeof saved === 'object' ? { ...base, ...saved } : base
+    } catch { return base }
+  })
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     try { localStorage.setItem('key-bag', JSON.stringify(bag)) } catch {}
   }, [bag])
+
+  useEffect(() => {
+    try { localStorage.setItem('key-inventory', JSON.stringify(inventory)) } catch {}
+  }, [inventory])
+
+  useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(''), 2600)
+    return () => clearTimeout(timer)
+  }, [notice])
 
   const closeMenu = () => setMenuOpen(false)
   const openCheckout = () => {
@@ -422,7 +482,20 @@ function App() {
 
   const finishOrder = details => {
     const number = `KEY-${Date.now().toString().slice(-6)}`
-    setConfirmation({ ...details, number })
+    setConfirmation({ ...details, items: bag, number })
+    setInventory(current => {
+      const next = { ...current }
+      bag.forEach(item => {
+        const sizes = { ...(next[item.id] || {}) }
+        sizes[item.size] = Math.max(0, (sizes[item.size] || 0) - item.quantity)
+        next[item.id] = sizes
+      })
+      return next
+    })
+    try {
+      const orders = JSON.parse(localStorage.getItem('key-orders') || '[]')
+      localStorage.setItem('key-orders', JSON.stringify([{ ...details, items: bag, number }, ...orders].slice(0, 20)))
+    } catch {}
     setBag([])
     setCheckoutOpen(false)
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -435,20 +508,28 @@ function App() {
 
   const addToBag = (product, size, quantity) => {
     if (!size) return
+    const available = (inventory[product.id] || product.sizes || {})[size] || 0
+    if (available <= 0) return
     setBag(current => {
       const key = `${product.id}-${size}`
       const found = current.find(item => item.key === key)
-      if (found) return current.map(item => item.key === key ? { ...item, quantity: item.quantity + quantity } : item)
-      return [...current, { ...product, size, quantity, key }]
+      const nextQuantity = Math.min(available, (found?.quantity || 0) + quantity)
+      if (found) return current.map(item => item.key === key ? { ...item, quantity: nextQuantity } : item)
+      return [...current, { ...product, size, quantity: Math.min(quantity, available), key }]
     })
     setSelectedProduct(null)
     setBagOpen(true)
+    setNotice('Produto adicionado à sacola.')
   }
 
   const removeFromBag = key => setBag(current => current.filter(item => item.key !== key))
   const updateQuantity = (key, quantity) => {
     if (quantity < 1) return removeFromBag(key)
-    setBag(current => current.map(item => item.key === key ? { ...item, quantity } : item))
+    setBag(current => current.map(item => {
+      if (item.key !== key) return item
+      const max = (inventory[item.id] || {})[item.size] || 0
+      return { ...item, quantity: Math.min(quantity, max) }
+    }))
   }
 
   return (
@@ -493,7 +574,7 @@ function App() {
       ) : checkoutOpen ? (
         <CheckoutPage items={bag} onBack={() => { setCheckoutOpen(false); setBagOpen(true) }} onComplete={finishOrder} />
       ) : selectedProduct ? (
-        <ProductPage product={selectedProduct} onBack={() => setSelectedProduct(null)} onAdd={addToBag} />
+        <ProductPage product={selectedProduct} inventory={inventory} onBack={() => setSelectedProduct(null)} onAdd={addToBag} />
       ) : (
         <>
           <main>
@@ -571,8 +652,11 @@ function App() {
           onRemove={removeFromBag}
           onQuantity={updateQuantity}
           onCheckout={openCheckout}
+          inventory={inventory}
         />
       )}
+
+      {notice && <div className="toast" role="status">{notice}</div>}
     </div>
   )
 }
