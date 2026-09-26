@@ -4,16 +4,16 @@ import './styles.css'
 import { supabase } from './lib/supabase'
 
 const products = [
-  { id: 1, name: 'Azure Set', price: 429, category: 'Conjuntos', image: '/key/jeans.jpeg', description: 'Conjunto estruturado em textura azul, pensado para uma silhueta marcada e contemporânea.' },
-  { id: 2, name: 'Suite Set', price: 389, category: 'Conjuntos', image: '/key/conjunto.jpeg', description: 'Conjunto de tricot com desenho listrado e proporção delicada.' },
-  { id: 3, name: 'Capri Top', price: 289, category: 'Blusas', image: '/leonor.jpeg', description: 'Top acetinado de alças finas com detalhe de franjas para um toque marcante.' },
-  { id: 4, name: 'Rouge Dress', price: 499, category: 'Vestidos', image: null, description: 'Vestido em tom intenso com construção fluida e detalhes de volume.' },
-  { id: 5, name: 'Louvre Jumpsuit', price: 479, category: 'Macacões', image: '/key/marrom.jpeg', description: 'Macacão de denim em marrom profundo, com cintura marcada e modelagem alongada.' },
-  { id: 6, name: 'Riviera Set', price: 529, category: 'Conjuntos', image: '/key/blazer.jpeg', description: 'Conjunto de alfaiataria rosa com blazer e shorts, finalizado com faixa acetinada.' },
-  { id: 7, name: 'Monaco Set', price: 449, category: 'Conjuntos', image: '/key/blusa%20vermelha.jpeg', description: 'Conjunto vermelho com camisa estruturada e calça de listras verticais.' },
-  { id: 8, name: 'Milano Vest', price: 329, category: 'Blusas', image: '/key/top%20vermelho.jpeg', description: 'Colete estruturado vermelho com cintura marcada e acabamento arquitetônico.' },
-  { id: 9, name: 'Paris Dots Set', price: 429, category: 'Conjuntos', image: '/black.jpeg', description: 'Conjunto de poás com camisa cropped e shorts de cintura alta.' },
-  { id: 10, name: 'Palais Dress', price: 459, category: 'Vestidos', image: '/poair.jpeg', description: 'Vestido longo rosa com recorte frontal e movimento fluido.' }
+  { id: 1, name: 'Azure Set', price: 429, category: 'Conjuntos', image: '/key/jeans.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Conjunto estruturado em textura azul, pensado para uma silhueta marcada e contemporânea.' },
+  { id: 2, name: 'Suite Set', price: 389, category: 'Conjuntos', image: '/key/conjunto.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Conjunto de tricot com desenho listrado e proporção delicada.' },
+  { id: 3, name: 'Capri Top', price: 289, category: 'Blusas', image: '/leonor.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Top acetinado de alças finas com detalhe de franjas para um toque marcante.' },
+  { id: 4, name: 'Rouge Dress', price: 499, category: 'Vestidos', image: null, sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Vestido em tom intenso com construção fluida e detalhes de volume.' },
+  { id: 5, name: 'Louvre Jumpsuit', price: 479, category: 'Macacões', image: '/key/marrom.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Macacão de denim em marrom profundo, com cintura marcada e modelagem alongada.' },
+  { id: 6, name: 'Riviera Set', price: 529, category: 'Conjuntos', image: '/key/blazer.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Conjunto de alfaiataria rosa com blazer e shorts, finalizado com faixa acetinada.' },
+  { id: 7, name: 'Monaco Set', price: 449, category: 'Conjuntos', image: '/key/blusa%20vermelha.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Conjunto vermelho com camisa estruturada e calça de listras verticais.' },
+  { id: 8, name: 'Milano Vest', price: 329, category: 'Blusas', image: '/key/top%20vermelho.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Colete estruturado vermelho com cintura marcada e acabamento arquitetônico.' },
+  { id: 9, name: 'Paris Dots Set', price: 429, category: 'Conjuntos', image: '/black.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Conjunto de poás com camisa cropped e shorts de cintura alta.' },
+  { id: 10, name: 'Palais Dress', price: 459, category: 'Vestidos', image: '/poair.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Vestido longo rosa com recorte frontal e movimento fluido.' }
 ]
 
 const navItems = [
