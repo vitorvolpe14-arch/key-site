@@ -2184,7 +2184,7 @@ footer h4 {
   color: var(--wine);
 }
 .hero h1 {
-  color: #c47b8d;
+  color: var(--wine);
 }
 .hero h1 em {
   color: var(--wine);
@@ -2251,7 +2251,7 @@ footer h4 {
   line-height: .82;
   font-weight: 400;
   letter-spacing: -.055em;
-  color: #c47b8d;
+  color: var(--wine);
 }
 .category-page-hero .eyebrow {
   color: var(--wine);
