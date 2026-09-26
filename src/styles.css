@@ -309,17 +309,17 @@ button { color: inherit; }
 }
 .category-card:hover::before { transform: scale(1.04); }
 .category-dresses {
-  background-image: linear-gradient(180deg, rgba(42,16,25,.03) 35%, rgba(42,16,25,.52) 100%), url("https://www.egyptianblue.com/cdn/shop/files/Long_black_Sequin_Dress_look_2.jpg?v=1741468282&width=1200");
+  background-image: linear-gradient(180deg, rgba(42,16,25,.03) 35%, rgba(42,16,25,.52) 100%), url("https://images.pexels.com/photos/14532615/pexels-photo-14532615.jpeg?cs=srgb&dl=pexels-andrea-musto-135941147-14532615.jpg&fm=jpg");
   background-size: cover;
   background-position: center;
 }
 .category-sets {
-  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.55) 100%), url("https://fashn.ai/_next/image?dpl=dpl_BZdyhXS2J5wmVSaaW7fduGnDaMiA&q=80&url=%2Fproducts.webp&w=1200");
+  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.55) 100%), url("https://images.pexels.com/photos/9377941/pexels-photo-9377941.jpeg?cs=srgb&dl=pexels-zratechnologies-9377941.jpg&fm=jpg");
   background-size: cover;
   background-position: center;
 }
 .category-tops {
-  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.58) 100%), url("https://i.pinimg.com/originals/94/36/2e/94362eaf7378a9229df9a04d28cf179e.jpg");
+  background-image: linear-gradient(180deg, rgba(42,16,25,.02) 35%, rgba(42,16,25,.58) 100%), url("https://images.pexels.com/photos/11791522/pexels-photo-11791522.jpeg?cs=srgb&dl=pexels-redwolf-11791522.jpg&fm=jpg");
   background-size: cover;
   background-position: center;
 }
