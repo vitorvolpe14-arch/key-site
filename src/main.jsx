@@ -3,10 +3,16 @@ import ReactDOM from 'react-dom/client'
 import './styles.css'
 
 const products = [
-  { id: 1, name: 'Em breve', price: null, category: 'New in', image: null },
-  { id: 2, name: 'Em breve', price: null, category: 'New in', image: null },
-  { id: 3, name: 'Em breve', price: null, category: 'New in', image: null },
-  { id: 4, name: 'Em breve', price: null, category: 'New in', image: null }
+  { id: 1, name: 'Suite Set', price: 'R$ 389,00', category: 'Conjuntos', image: null },
+  { id: 2, name: 'Azure Set', price: 'R$ 429,00', category: 'Conjuntos', image: null },
+  { id: 3, name: 'Palais Dress', price: 'R$ 459,00', category: 'Vestidos', image: null },
+  { id: 4, name: 'Rouge Dress', price: 'R$ 499,00', category: 'Vestidos', image: null },
+  { id: 5, name: 'Louvre Jumpsuit', price: 'R$ 479,00', category: 'Macacões', image: null },
+  { id: 6, name: 'Riviera Set', price: 'R$ 529,00', category: 'Conjuntos', image: null },
+  { id: 7, name: 'Monaco Set', price: 'R$ 449,00', category: 'Conjuntos', image: null },
+  { id: 8, name: 'Milano Vest', price: 'R$ 329,00', category: 'Blusas', image: null },
+  { id: 9, name: 'Paris Dots Set', price: 'R$ 429,00', category: 'Conjuntos', image: null },
+  { id: 10, name: 'Capri Top', price: 'R$ 289,00', category: 'Blusas', image: null }
 ]
 
 function ProductCard({ product }) {
@@ -17,7 +23,7 @@ function ProductCard({ product }) {
       </div>
       <div className="product-info">
         <h3>{product.name}</h3>
-        <p>{product.price ? product.price : 'Preço em breve'}</p>
+        <p>{product.price}</p>
       </div>
     </article>
   )
