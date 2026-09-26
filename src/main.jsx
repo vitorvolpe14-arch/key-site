@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import './styles.css'
+import { supabase } from './lib/supabase'
 
 const products = [
   { id: 1, name: 'Azure Set', price: 429, category: 'Conjuntos', image: '/key/jeans.jpeg', description: 'Conjunto estruturado em textura azul, pensado para uma silhueta marcada e contemporânea.' },
@@ -914,6 +915,68 @@ function App() {
   const [notice, setNotice] = useState('')
   const [siteConfig, setSiteConfig] = useState(readAdminConfig)
   const [siteAssets, setSiteAssets] = useState({})
+  const [catalogProducts, setCatalogProducts] = useState(products)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadStoreData = async () => {
+      try {
+        const [{ data: dbProducts }, { data: settings }, { data: banners }] = await Promise.all([
+          supabase.from('products').select('legacy_id,name,price,description,image_url,active').eq('active', true).order('legacy_id'),
+          supabase.from('site_settings').select('key,value'),
+          supabase.from('banners').select('id,title,subtitle,cta,image_path,enabled,sort_order').order('sort_order')
+        ])
+
+        if (cancelled) return
+
+        if (Array.isArray(dbProducts) && dbProducts.length) {
+          const merged = dbProducts.map(row => {
+            const fallback = products.find(product => product.id === row.legacy_id) || {}
+            return {
+              ...fallback,
+              id: row.legacy_id,
+              name: row.name || fallback.name,
+              price: Number(row.price ?? fallback.price ?? 0),
+              description: row.description || fallback.description || '',
+              image: row.image_url || fallback.image || null,
+              category: fallback.category || row.category || 'Outros'
+            }
+          })
+          setCatalogProducts(merged)
+        }
+
+        if (Array.isArray(settings) && settings.length) {
+          const remoteSettings = Object.fromEntries(settings.map(item => [item.key, item.value]))
+          setSiteConfig(current => ({
+            ...current,
+            announcement: typeof remoteSettings.announcement === 'string' ? remoteSettings.announcement : current.announcement,
+            freeShippingThreshold: Number(remoteSettings.free_shipping_threshold ?? current.freeShippingThreshold)
+          }))
+        }
+
+        if (Array.isArray(banners) && banners.length) {
+          setSiteConfig(current => ({
+            ...current,
+            banners: banners.map(banner => ({
+              id: banner.id,
+              title: banner.title,
+              subtitle: banner.subtitle,
+              cta: banner.cta,
+              image: banner.image_path || '',
+              fileId: '',
+              enabled: banner.enabled
+            }))
+          }))
+        }
+      } catch (error) {
+        console.warn('KEY backend unavailable; using local fallback.', error)
+      }
+    }
+
+    loadStoreData()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -958,16 +1021,18 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
   const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)
-  const publicProducts = products.map(product => {
+  const publicProducts = catalogProducts.map(product => {
     const config = siteConfig.products?.[product.id]
     return { ...product, ...(config || {}), image: config?.fileId ? (siteAssets[config.fileId] || config.image || product.image) : (config?.image || product.image) }
   })
   const heroBanner = siteConfig.banners?.find(banner => banner.enabled) || siteConfig.banners?.[0] || {}
   const heroImage = heroBanner.fileId ? (siteAssets[heroBanner.fileId] || heroBanner.image || '/key/banner-01.jpg') : (heroBanner.image || '/key/banner-01.jpg')
 
-  const finishOrder = details => {
+  const finishOrder = async details => {
     const number = `KEY-${Date.now().toString().slice(-6)}`
-    setConfirmation({ ...details, items: bag, number })
+    const order = { ...details, items: bag, number }
+    setConfirmation(order)
+
     setInventory(current => {
       const next = { ...current }
       bag.forEach(item => {
@@ -977,10 +1042,57 @@ function App() {
       })
       return next
     })
+
     try {
       const orders = JSON.parse(localStorage.getItem('key-orders') || '[]')
-      localStorage.setItem('key-orders', JSON.stringify([{ ...details, items: bag, number }, ...orders].slice(0, 20)))
+      localStorage.setItem('key-orders', JSON.stringify([order, ...orders].slice(0, 20)))
     } catch {}
+
+    try {
+      const { data: insertedOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: number,
+          customer_name: details.name,
+          customer_email: details.email,
+          customer_phone: details.phone,
+          cep: details.cep,
+          address: details.address,
+          address_number: details.number,
+          city: details.city,
+          state: details.state,
+          payment_method: details.payment,
+          subtotal: details.subtotal,
+          shipping: details.shippingCost || 0,
+          discount: details.discount || 0,
+          total: details.total,
+          coupon: details.coupon || null,
+          status: 'pending'
+        })
+        .select('id')
+        .single()
+
+      if (orderError) throw orderError
+
+      const orderItems = bag.map(item => ({
+        order_id: insertedOrder.id,
+        product_id: null,
+        product_name: item.name,
+        size: item.size,
+        quantity: item.quantity,
+        unit_price: item.price
+      }))
+
+      // Product UUIDs are resolved server-side in the next backend step.
+      // For now, persist the order header and keep the local item copy as the fallback.
+      if (orderItems.length) {
+        const safeItems = orderItems.map(({ product_id, ...item }) => item)
+        await supabase.from('order_items').insert(safeItems)
+      }
+    } catch (error) {
+      console.warn('KEY order backend sync unavailable; local order retained.', error)
+    }
+
     setBag([])
     setCheckoutOpen(false)
     window.scrollTo({ top: 0, behavior: 'instant' })
