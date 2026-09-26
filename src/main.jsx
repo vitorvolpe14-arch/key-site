@@ -23,7 +23,7 @@ function ProductCard({ product }) {
         role="img"
         aria-label={product.name}
         style={{
-          backgroundImage: "url('/products-sprite.jpg')",
+          backgroundImage: "url('/products-sprite.svg')",
           backgroundPosition: product.position
         }}
       />
