@@ -516,7 +516,47 @@ async function adminDeleteFile(id) {
   })
 }
 
+
+const ADMIN_USERNAME = 'admin'
+const ADMIN_PASSWORD = 'KEY2026'
+const ADMIN_SESSION = 'key-admin-session'
+
+function AdminLogin({ onLogin }) {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+
+  const submit = e => {
+    e.preventDefault()
+    if (username.trim() === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      sessionStorage.setItem(ADMIN_SESSION, 'authenticated')
+      onLogin()
+      return
+    }
+    setError('Usuário ou senha inválidos.')
+  }
+
+  return (
+    <main className="admin-login-page">
+      <div className="admin-login-card">
+        <div className="admin-login-brand">KEY</div>
+        <p className="eyebrow">KEY / MANAGEMENT</p>
+        <h1>Acesso restrito.</h1>
+        <p className="admin-login-copy">Entre com suas credenciais para acessar o painel administrativo.</p>
+        <form onSubmit={submit} className="admin-login-form">
+          <label>Usuário<input autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Usuário" required /></label>
+          <label>Senha<input autoComplete="current-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha" required /></label>
+          {error && <p className="admin-login-error">{error}</p>}
+          <button className="admin-primary full" type="submit">Entrar no painel</button>
+        </form>
+        <button className="admin-login-store" type="button" onClick={() => { window.location.href = '/' }}>Voltar para a loja</button>
+      </div>
+    </main>
+  )
+}
+
 function AdminPage() {
+  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem(ADMIN_SESSION) === 'authenticated')
   const [tab, setTab] = useState('overview')
   const [files, setFiles] = useState([])
   const [config, setConfig] = useState(readAdminConfig)
@@ -636,6 +676,8 @@ function AdminPage() {
     </div>
   )
 
+  if (!authenticated) return <AdminLogin onLogin={() => setAuthenticated(true)} />
+
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -647,7 +689,10 @@ function AdminPage() {
             </button>
           ))}
         </nav>
-        <button className="admin-sidebar-store" onClick={leave}>Ver loja <span>↗</span></button>
+        <div className="admin-sidebar-actions">
+          <button className="admin-sidebar-store" onClick={leave}>Ver loja <span>↗</span></button>
+          <button className="admin-logout" onClick={() => { sessionStorage.removeItem(ADMIN_SESSION); setAuthenticated(false) }}>Sair</button>
+        </div>
       </aside>
 
       <main className="admin-content">
@@ -805,6 +850,28 @@ function App() {
     } catch { return base }
   })
   const [notice, setNotice] = useState('')
+  const [siteConfig, setSiteConfig] = useState(readAdminConfig)
+  const [siteAssets, setSiteAssets] = useState({})
+
+  useEffect(() => {
+    let cancelled = false
+    let urls = []
+    adminListFiles().then(files => {
+      const map = {}
+      files.forEach(file => {
+        try {
+          const url = URL.createObjectURL(file.blob)
+          urls.push(url)
+          map[file.id] = url
+        } catch {}
+      })
+      if (!cancelled) setSiteAssets(map)
+    }).catch(() => {})
+    return () => {
+      cancelled = true
+      urls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [])
 
   useEffect(() => {
     try { localStorage.setItem('key-bag', JSON.stringify(bag)) } catch {}
@@ -829,7 +896,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
   const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)
-  const publicProducts = catalogProducts.map(product => {
+  const publicProducts = products.map(product => {
     const config = siteConfig.products?.[product.id]
     return { ...product, ...(config || {}), image: config?.fileId ? (siteAssets[config.fileId] || config.image || product.image) : (config?.image || product.image) }
   })
