@@ -16,6 +16,26 @@ const products = [
   { id: 10, name: 'Palais Dress', price: 459, category: 'Vestidos', image: '/poair.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Vestido longo rosa com recorte frontal e movimento fluido.' }
 ]
 
+
+const demoVariants = {
+  1: [{ name: 'Azul', hex: '#2B4A78', sizes: { PP: 1, P: 3, M: 4, G: 2 } }, { name: 'Marfim', hex: '#E6DDCF', sizes: { PP: 2, P: 2, M: 3, G: 1 } }, { name: 'Bordô', hex: '#5A1F32', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  2: [{ name: 'Areia', hex: '#C9B59C', sizes: { PP: 2, P: 3, M: 3, G: 1 } }, { name: 'Preto', hex: '#181717', sizes: { PP: 1, P: 3, M: 4, G: 2 } }, { name: 'Vinho', hex: '#6A273B', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  3: [{ name: 'Marfim', hex: '#E9E1D5', sizes: { PP: 2, P: 3, M: 2, G: 1 } }, { name: 'Preto', hex: '#171516', sizes: { PP: 1, P: 2, M: 3, G: 1 } }, { name: 'Rosa Antigo', hex: '#B77F83', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  4: [{ name: 'Rouge', hex: '#8B2436', sizes: { PP: 1, P: 3, M: 3, G: 2 } }, { name: 'Preto', hex: '#171314', sizes: { PP: 1, P: 2, M: 2, G: 1 } }, { name: 'Champagne', hex: '#D8C2A5', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  5: [{ name: 'Chocolate', hex: '#6A4938', sizes: { PP: 1, P: 3, M: 4, G: 2 } }, { name: 'Denim', hex: '#3D5875', sizes: { PP: 1, P: 2, M: 3, G: 1 } }, { name: 'Preto', hex: '#191717', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  6: [{ name: 'Rosa', hex: '#D6A4A7', sizes: { PP: 1, P: 3, M: 3, G: 2 } }, { name: 'Marfim', hex: '#E7DED0', sizes: { PP: 1, P: 2, M: 3, G: 1 } }, { name: 'Preto', hex: '#1A1718', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  7: [{ name: 'Vermelho', hex: '#A32632', sizes: { PP: 1, P: 3, M: 4, G: 2 } }, { name: 'Marfim', hex: '#E8E0D5', sizes: { PP: 1, P: 2, M: 2, G: 1 } }, { name: 'Preto', hex: '#181617', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  8: [{ name: 'Vermelho', hex: '#A32632', sizes: { PP: 1, P: 3, M: 3, G: 2 } }, { name: 'Off White', hex: '#E9E3D9', sizes: { PP: 1, P: 2, M: 2, G: 1 } }, { name: 'Chocolate', hex: '#5A4032', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  9: [{ name: 'Preto', hex: '#171617', sizes: { PP: 1, P: 3, M: 4, G: 2 } }, { name: 'Creme', hex: '#E4DCCF', sizes: { PP: 1, P: 2, M: 3, G: 1 } }, { name: 'Bordô', hex: '#642238', sizes: { PP: 1, P: 2, M: 2, G: 1 } }],
+  10: [{ name: 'Rosa Pétala', hex: '#D8A1A7', sizes: { PP: 1, P: 3, M: 3, G: 2 } }, { name: 'Vinho', hex: '#6C293D', sizes: { PP: 1, P: 2, M: 2, G: 1 } }, { name: 'Preto', hex: '#191719', sizes: { PP: 1, P: 2, M: 2, G: 1 } }]
+}
+
+const getVariants = product => Array.isArray(product?.variants) && product.variants.length ? product.variants : (demoVariants[product?.id] || [])
+const buildInventory = list => Object.fromEntries(list.map(product => [
+  product.id,
+  Object.fromEntries(getVariants(product).map(variant => [variant.name, { ...(variant.sizes || {}) }]))
+]))
+
 const navItems = [
   { label: 'New in', href: '#new' },
   { label: 'Shop', href: '#shop' },
@@ -47,7 +67,8 @@ function ProductImage({ product, className = '' }) {
 }
 
 function ProductCard({ product, onOpen }) {
-  const totalStock = Object.values(product.sizes || {}).reduce((sum, value) => sum + value, 0)
+  const variants = getVariants(product)
+  const totalStock = variants.reduce((sum, variant) => sum + Object.values(variant.sizes || {}).reduce((s, value) => s + Number(value || 0), 0), 0)
   return (
     <article className="product-card">
       <button className="product-card-button" type="button" onClick={() => onOpen(product)}>
@@ -64,14 +85,28 @@ function ProductCard({ product, onOpen }) {
 }
 
 function ProductPage({ product, onBack, onAdd, inventory }) {
+  const variants = getVariants(product)
+  const [color, setColor] = useState(variants[0]?.name || '')
   const [size, setSize] = useState('')
   const [quantity, setQuantity] = useState(1)
-  const stock = inventory[product.id] || product.sizes || {}
-  const available = size ? (stock[size] || 0) : 0
+  const selectedVariant = variants.find(item => item.name === color) || variants[0]
+  const stock = inventory[product.id] || Object.fromEntries(variants.map(item => [item.name, item.sizes || {}]))
+  const colorStock = selectedVariant ? (stock[selectedVariant.name] || selectedVariant.sizes || {}) : {}
+  const available = size ? Number(colorStock[size] || 0) : 0
 
   useEffect(() => {
+    const first = variants[0]?.name || ''
+    setColor(first)
+    setSize('')
+    setQuantity(1)
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [product.id])
+
+  const selectColor = value => {
+    setColor(value)
+    setSize('')
+    setQuantity(1)
+  }
 
   return (
     <main className="product-page">
@@ -88,6 +123,28 @@ function ProductPage({ product, onBack, onAdd, inventory }) {
           <p className="product-detail-price">{money(product.price)}</p>
           <p className="product-description">{product.description}</p>
 
+          <div className="color-block">
+            <div className="color-heading"><span>Cor</span><strong>{selectedVariant?.name || 'Selecione'}</strong></div>
+            <div className="color-options" role="radiogroup" aria-label="Cores disponíveis">
+              {variants.map(item => {
+                const itemTotal = Object.values(stock[item.name] || item.sizes || {}).reduce((sum, value) => sum + Number(value || 0), 0)
+                return (
+                  <button
+                    key={item.name}
+                    type="button"
+                    className={color === item.name ? 'color-swatch selected' : 'color-swatch'}
+                    style={{ '--swatch': item.hex }}
+                    onClick={() => selectColor(item.name)}
+                    aria-label={itemTotal > 0 ? item.name : item.name + ' esgotada'}
+                    title={item.name}
+                    disabled={itemTotal <= 0}
+                  />
+                )
+              })}
+            </div>
+            <p className="color-name">{selectedVariant?.name || 'Escolha uma cor'}</p>
+          </div>
+
           <div className="size-block">
             <div className="size-heading">
               <span>Tamanho</span>
@@ -99,10 +156,10 @@ function ProductPage({ product, onBack, onAdd, inventory }) {
                   key={item}
                   type="button"
                   className={size === item ? 'selected' : ''}
-                  disabled={(stock[item] || 0) <= 0}
+                  disabled={(colorStock[item] || 0) <= 0}
                   onClick={() => { setSize(item); setQuantity(1) }}
                 >
-                  {item}{(stock[item] || 0) <= 0 ? ' — indisponível' : ''}
+                  {item}{(colorStock[item] || 0) <= 0 ? ' — indisponível' : ''}
                 </button>
               ))}
             </div>
@@ -120,12 +177,12 @@ function ProductPage({ product, onBack, onAdd, inventory }) {
           <button
             className="add-to-bag"
             type="button"
-            disabled={!size || available === 0}
-            onClick={() => onAdd(product, size, quantity)}
+            disabled={!color || !size || available === 0}
+            onClick={() => onAdd(product, color, size, quantity)}
           >
-            {!size ? 'Selecione um tamanho' : available === 0 ? 'Tamanho indisponível' : 'Adicionar à sacola'}
+            {!color ? 'Selecione uma cor' : !size ? 'Selecione um tamanho' : available === 0 ? 'Tamanho indisponível' : 'Adicionar à sacola'}
           </button>
-          <p className="product-note">{size && available > 0 && available <= 3 ? `Restam ${available} unidade${available > 1 ? 's' : ''} neste tamanho.` : 'Envio calculado no checkout.'}</p>
+          <p className="product-note">{color && size && available > 0 && available <= 3 ? `Restam ${available} unidade${available > 1 ? 's' : ''} nesta cor e tamanho.` : 'Envio calculado no checkout.'}</p>
         </div>
       </div>
     </main>
@@ -319,7 +376,7 @@ function CheckoutPage({ items, onBack, onComplete }) {
             {items.map(item => (
               <div className="checkout-item" key={item.key}>
                 <div className="checkout-thumb"><ProductImage product={item} /></div>
-                <div><h3>{item.name}</h3><p>{item.size} · {item.quantity}x</p></div>
+                <div><h3>{item.name}</h3><p>{item.color} · {item.color} · {item.size} · {item.quantity}x</p></div>
                 <strong>{money(item.price * item.quantity)}</strong>
               </div>
             ))}
@@ -409,7 +466,7 @@ function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout, inventory
                     <div className="bag-item-title">
                       <div>
                         <h3>{item.name}</h3>
-                        <p>Tamanho: {item.size}</p>
+                        <p>{item.color} · Tamanho: {item.size}</p>
                       </div>
                       <button onClick={() => onRemove(item.key)} aria-label={`Remover ${item.name}`}>×</button>
                     </div>
@@ -417,7 +474,7 @@ function BagDrawer({ items, onClose, onRemove, onQuantity, onCheckout, inventory
                       <div className="mini-quantity">
                         <button onClick={() => onQuantity(item.key, item.quantity - 1)}>−</button>
                         <span>{item.quantity}</span>
-                        <button disabled={item.quantity >= ((inventory[item.id] || {})[item.size] || 0)} onClick={() => onQuantity(item.key, item.quantity + 1)}>+</button>
+                        <button disabled={item.quantity >= Number((inventory[item.id] || {})[item.color]?.[item.size] || 0)} onClick={() => onQuantity(item.key, item.quantity + 1)}>+</button>
                       </div>
                       <strong>{money(item.price * item.quantity)}</strong>
                     </div>
@@ -1012,10 +1069,10 @@ function App() {
     try { return JSON.parse(localStorage.getItem('key-bag') || '[]') } catch { return [] }
   })
   const [inventory, setInventory] = useState(() => {
-    const base = Object.fromEntries(products.map(product => [product.id, product.sizes || {}]))
+    const base = buildInventory(products)
     try {
       const saved = JSON.parse(localStorage.getItem('key-inventory') || 'null')
-      return saved && typeof saved === 'object' ? { ...base, ...saved } : base
+      return saved && typeof saved === 'object' && Object.values(saved).some(value => value && typeof value === 'object' && Object.values(value).some(inner => inner && typeof inner === 'object')) ? { ...base, ...saved } : base
     } catch { return base }
   })
   const [notice, setNotice] = useState('')
@@ -1029,7 +1086,7 @@ function App() {
     const loadStoreData = async () => {
       try {
         const [{ data: dbProducts }, { data: settings }, { data: banners }] = await Promise.all([
-          supabase.from('products').select('legacy_id,name,price,description,image_url,active').eq('active', true).order('legacy_id'),
+          supabase.from('products').select('legacy_id,name,price,description,image_url,colors,sizes,variants,stock,active').eq('active', true).order('legacy_id'),
           supabase.from('site_settings').select('key,value'),
           supabase.from('banners').select('id,title,subtitle,cta,image_path,enabled,sort_order').order('sort_order')
         ])
@@ -1047,10 +1104,15 @@ function App() {
               price: Number(row.price ?? fallback.price ?? 0),
               description: row.description || fallback.description || '',
               image: row.image_url || fallback.image || null,
+              colors: row.colors || fallback.colors || getVariants(fallback).map(item => ({ name: item.name, hex: item.hex })),
+              variants: row.variants || fallback.variants || demoVariants[row.legacy_id] || [],
+              sizes: row.sizes || fallback.sizes || {},
+              stock: Number(row.stock ?? fallback.stock ?? 0),
               category: fallback.category || row.category || 'Outros'
             }
           })
           setCatalogProducts(merged)
+          setInventory(current => ({ ...buildInventory(merged), ...current }))
         }
 
         if (Array.isArray(settings) && settings.length) {
@@ -1130,7 +1192,7 @@ function App() {
   const bagCount = bag.reduce((sum, item) => sum + item.quantity, 0)
   const publicProducts = catalogProducts.map(product => {
     const config = siteConfig.products?.[product.id]
-    return { ...product, ...(config || {}), image: config?.fileId ? (siteAssets[config.fileId] || config.image || product.image) : (config?.image || product.image) }
+    return { ...product, ...(config || {}), variants: getVariants(product), colors: product.colors || getVariants(product).map(item => ({ name: item.name, hex: item.hex })), image: config?.fileId ? (siteAssets[config.fileId] || config.image || product.image) : (config?.image || product.image) }
   })
   const heroBanner = siteConfig.banners?.find(banner => banner.enabled) || siteConfig.banners?.[0] || {}
   const heroImage = heroBanner.fileId ? (siteAssets[heroBanner.fileId] || heroBanner.image || '/key/banner-01.jpg') : (heroBanner.image || '/key/banner-01.jpg')
@@ -1141,11 +1203,13 @@ function App() {
     setConfirmation(order)
 
     setInventory(current => {
-      const next = { ...current }
+      const next = structuredClone(current)
       bag.forEach(item => {
-        const sizes = { ...(next[item.id] || {}) }
-        sizes[item.size] = Math.max(0, (sizes[item.size] || 0) - item.quantity)
-        next[item.id] = sizes
+        const colors = { ...(next[item.id] || {}) }
+        const sizes = { ...(colors[item.color] || {}) }
+        sizes[item.size] = Math.max(0, Number(sizes[item.size] || 0) - item.quantity)
+        colors[item.color] = sizes
+        next[item.id] = colors
       })
       return next
     })
@@ -1185,6 +1249,7 @@ function App() {
         order_id: insertedOrder.id,
         product_id: item.dbId || null,
         product_name: item.name,
+        color: item.color || '',
         size: item.size,
         quantity: item.quantity,
         unit_price: item.price
@@ -1236,16 +1301,16 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  const addToBag = (product, size, quantity) => {
-    if (!size) return
-    const available = (inventory[product.id] || product.sizes || {})[size] || 0
+  const addToBag = (product, color, size, quantity) => {
+    if (!color || !size) return
+    const available = Number((inventory[product.id] || {})[color]?.[size] || 0)
     if (available <= 0) return
     setBag(current => {
-      const key = `${product.id}-${size}`
+      const key = `${product.id}-${color}-${size}`
       const found = current.find(item => item.key === key)
       const nextQuantity = Math.min(available, (found?.quantity || 0) + quantity)
       if (found) return current.map(item => item.key === key ? { ...item, quantity: nextQuantity } : item)
-      return [...current, { ...product, size, quantity: Math.min(quantity, available), key }]
+      return [...current, { ...product, color, size, quantity: Math.min(quantity, available), key }]
     })
     setSelectedProduct(null)
     setBagOpen(true)
@@ -1257,7 +1322,7 @@ function App() {
     if (quantity < 1) return removeFromBag(key)
     setBag(current => current.map(item => {
       if (item.key !== key) return item
-      const max = (inventory[item.id] || {})[item.size] || 0
+      const max = Number((inventory[item.id] || {})[item.color]?.[item.size] || 0)
       return { ...item, quantity: Math.min(quantity, max) }
     }))
   }
