@@ -402,6 +402,94 @@ function CheckoutPage({ items, onBack, onComplete }) {
   )
 }
 
+function OrderTracking({ onBack }) {
+  const [number, setNumber] = useState('')
+  const [email, setEmail] = useState('')
+  const [order, setOrder] = useState(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const statusLabels = {
+    pending: 'Pedido recebido',
+    paid: 'Pagamento confirmado',
+    processing: 'Em preparação',
+    shipped: 'Enviado',
+    completed: 'Concluído',
+    cancelled: 'Cancelado'
+  }
+
+  const statusSteps = ['pending', 'paid', 'processing', 'shipped', 'completed']
+  const statusIndex = order ? statusSteps.indexOf(order.status) : -1
+
+  const search = async e => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setOrder(null)
+
+    const { data, error: queryError } = await supabase.rpc('track_key_order', {
+      p_order_number: number.trim(),
+      p_customer_email: email.trim()
+    })
+
+    setLoading(false)
+
+    if (queryError || !data?.length) {
+      setError('Não encontramos um pedido com esses dados.')
+      return
+    }
+
+    setOrder(data[0])
+  }
+
+  return (
+    <main className="tracking-page">
+      <div className="tracking-top">
+        <button className="back-link" onClick={onBack}>← Voltar para a loja</button>
+        <span>KEY / PEDIDO</span>
+      </div>
+
+      {!order ? (
+        <section className="tracking-card">
+          <p className="eyebrow">ACOMPANHE SEU PEDIDO</p>
+          <h1>Onde está sua KEY?</h1>
+          <p>Informe o número do pedido e o e-mail usado na compra.</p>
+          <form onSubmit={search} className="tracking-form">
+            <label>Número do pedido<input value={number} onChange={e => setNumber(e.target.value.toUpperCase())} placeholder="KEY-123456" required /></label>
+            <label>E-mail<input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required /></label>
+            {error && <p className="field-error">{error}</p>}
+            <button className="button" type="submit" disabled={loading}>{loading ? 'Consultando...' : 'Consultar pedido'}</button>
+          </form>
+        </section>
+      ) : (
+        <section className="tracking-result">
+          <div className="tracking-result-head">
+            <div><p className="eyebrow">PEDIDO {order.order_number}</p><h1>{statusLabels[order.status] || order.status}</h1><p>Realizado em {new Date(order.created_at).toLocaleDateString('pt-BR')}</p></div>
+            <button className="back-link" onClick={() => setOrder(null)}>Consultar outro</button>
+          </div>
+          {order.status === 'cancelled' ? (
+            <div className="tracking-cancelled">Este pedido foi cancelado.</div>
+          ) : (
+            <div className="tracking-steps">
+              {statusSteps.map((step, index) => (
+                <div className={index <= statusIndex ? 'tracking-step active' : 'tracking-step'} key={step}>
+                  <span>{index + 1}</span><strong>{statusLabels[step]}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="tracking-summary">
+            <div><span>Cliente</span><strong>{order.customer_name}</strong></div>
+            <div><span>Entrega</span><strong>{order.city} — {order.state}</strong></div>
+            <div><span>Total</span><strong>{money(Number(order.total))}</strong></div>
+          </div>
+          <button className="button" onClick={onBack}>Continuar na KEY</button>
+        </section>
+      )}
+    </main>
+  )
+}
+
 function OrderConfirmation({ order, onContinue }) {
   return (
     <main className="confirmation-page">
@@ -1133,6 +1221,7 @@ function App() {
   })
   const [bagOpen, setBagOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [trackingOpen, setTrackingOpen] = useState(false)
   const [confirmation, setConfirmation] = useState(() => {
     try { return JSON.parse(localStorage.getItem('key-last-order') || 'null') } catch { return null }
   })
@@ -1439,7 +1528,9 @@ function App() {
         <p>KEY — Unlock your style.</p>
       </div>
 
-      {confirmation ? (
+      {trackingOpen ? (
+        <OrderTracking onBack={() => setTrackingOpen(false)} />
+      ) : confirmation ? (
         <OrderConfirmation order={confirmation} onContinue={() => { setConfirmation(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
       ) : checkoutOpen ? (
         <CheckoutPage items={bag} onBack={() => { setCheckoutOpen(false); setBagOpen(true) }} onComplete={finishOrder} />
@@ -1509,7 +1600,7 @@ function App() {
           <footer id="about">
             <div className="footer-brand"><a className="logo" href="#">KEY</a><p>Unlock your style.</p></div>
             <div><h4>Shop</h4><a href="#new">New in</a><a href="#shop">Vestidos</a><a href="#shop">Conjuntos</a><a href="#shop">Blusas</a></div>
-            <div><h4>Help</h4><a href="#">Contato</a><a href="#">Envios</a><a href="#">Trocas</a><a href="#">Privacidade</a></div>
+            <div><h4>Help</h4><button className="footer-action" onClick={() => setTrackingOpen(true)}>Acompanhar pedido</button><a href="#about">Contato</a><a href="#about">Envios</a><a href="#about">Trocas</a><a href="#about">Privacidade</a></div>
             <div><h4>Follow</h4><a href="#">Instagram</a><a href="#">TikTok</a></div>
           </footer>
           <div className="copyright">© 2026 KEY. Todos os direitos reservados.</div>
