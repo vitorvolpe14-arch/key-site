@@ -200,6 +200,8 @@ function CheckoutPage({ items, onBack, onComplete }) {
   const [coupon, setCoupon] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponError, setCouponError] = useState('')
+  const [submitLoading, setSubmitLoading] = useState(false)
+  const [shippingError, setShippingError] = useState('')
 
   const update = e => {
     const { name, value } = e.target
@@ -219,6 +221,7 @@ function CheckoutPage({ items, onBack, onComplete }) {
     if (normalizedCity === 'fortaleza') {
       setShippingCost(15)
       setShippingLabel('Fortaleza')
+      setShippingError('')
       return
     }
 
@@ -231,11 +234,13 @@ function CheckoutPage({ items, onBack, onComplete }) {
     if (metroCities.includes(normalizedCity)) {
       setShippingCost(20)
       setShippingLabel('Região Metropolitana de Fortaleza')
+      setShippingError('')
       return
     }
 
     setShippingCost(null)
     setShippingLabel('Frete a calcular')
+    setShippingError('No momento, a KEY atende Fortaleza e a Região Metropolitana.')
   }
 
   const lookupCep = async () => {
@@ -292,21 +297,31 @@ function CheckoutPage({ items, onBack, onComplete }) {
     setCouponError('')
   }
 
-  const complete = e => {
+  const complete = async e => {
     e.preventDefault()
+    if (submitLoading) return
     const required = ['name', 'email', 'phone', 'cep', 'address', 'number', 'city', 'state']
     if (required.some(field => !shipping[field].trim())) return
+    if (shippingCost === null && !freeShipping && !couponShippingFree) {
+      setShippingError('Informe um endereço atendido pela KEY para calcular o frete.')
+      return
+    }
 
-    onComplete({
-      shipping,
-      payment,
-      subtotal,
-      shippingCost: effectiveShipping,
-      shippingLabel: effectiveShipping === 0 ? 'Grátis' : shippingLabel,
-      discount,
-      coupon: appliedCoupon?.code || null,
-      total
-    })
+    setSubmitLoading(true)
+    try {
+      await onComplete({
+        shipping,
+        payment,
+        subtotal,
+        shippingCost: effectiveShipping,
+        shippingLabel: effectiveShipping === 0 ? 'Grátis' : shippingLabel,
+        discount,
+        coupon: appliedCoupon?.code || null,
+        total
+      })
+    } finally {
+      setSubmitLoading(false)
+    }
   }
 
   if (items.length === 0) {
@@ -353,7 +368,7 @@ function CheckoutPage({ items, onBack, onComplete }) {
               <label>Cidade<input required name="city" value={shipping.city} onChange={update} onBlur={() => calculateShipping(shipping)} placeholder="Sua cidade" /></label>
               <label>UF<input required name="state" value={shipping.state} onChange={update} onBlur={() => calculateShipping(shipping)} placeholder="CE" maxLength="2" /></label>
             </div>
-            <p className="shipping-note">Fortaleza: R$ 15,00 · Região Metropolitana: R$ 20,00 · Outras localidades indisponíveis no momento.</p>
+            <p className="shipping-note">Fortaleza: R$ 15,00 · Região Metropolitana: R$ 20,00 · Outras localidades indisponíveis no momento.</p>{shippingError && <small className="field-error">{shippingError}</small>}
           </div>
 
           <div className="checkout-section">
@@ -394,7 +409,7 @@ function CheckoutPage({ items, onBack, onComplete }) {
           {discount > 0 && <div className="checkout-total muted"><span>Desconto</span><strong>− {money(discount)}</strong></div>}
           <div className="checkout-total muted"><span>Frete</span><strong>{freeShipping || couponShippingFree ? 'Grátis' : shippingCost === null ? shippingLabel : money(shippingCost)}</strong></div>
           <div className="checkout-total grand"><span>Total</span><strong>{money(total)}</strong></div>
-          <button className="button checkout-final" type="submit">Registrar pedido</button>
+          <button className="button checkout-final" type="submit" disabled={submitLoading}>{submitLoading ? 'Registrando pedido…' : 'Registrar pedido'}</button>
           <p className="checkout-secure">Seu pedido será registrado com segurança.</p>
         </aside>
       </form>
