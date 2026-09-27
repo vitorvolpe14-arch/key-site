@@ -633,6 +633,8 @@ function AdminPage() {
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
   const [selectedProductId, setSelectedProductId] = useState(1)
+  const [orders, setOrders] = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -657,6 +659,35 @@ function AdminPage() {
     if (!session) return
     adminListFiles().then(setFiles).catch(() => setNotice('Não foi possível carregar a biblioteca.')).finally(() => setLoading(false))
   }, [session])
+
+  const loadOrders = async () => {
+    setOrdersLoading(true)
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id,order_number,customer_name,customer_email,customer_phone,cep,address,address_number,city,state,payment_method,subtotal,shipping,discount,total,coupon,status,created_at,order_items(id,product_name,color,size,quantity,unit_price)')
+      .order('created_at', { ascending: false })
+    setOrdersLoading(false)
+    if (error) {
+      setNotice('Não foi possível carregar os pedidos.')
+      return
+    }
+    setOrders(data || [])
+  }
+
+  useEffect(() => {
+    if (!session || tab !== 'orders') return
+    loadOrders()
+  }, [session, tab])
+
+  const updateOrderStatus = async (id, status) => {
+    const { error } = await supabase.from('orders').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
+    if (error) {
+      setNotice('Não foi possível atualizar o pedido.')
+      return
+    }
+    setOrders(current => current.map(order => order.id === id ? { ...order, status } : order))
+    setNotice('Status do pedido atualizado.')
+  }
 
   const saveConfig = async next => {
     setConfig(next)
@@ -815,6 +846,7 @@ function AdminPage() {
 
   const nav = [
     ['overview', 'Visão geral'],
+    ['orders', 'Pedidos'],
     ['banners', 'Banners'],
     ['products', 'Produtos'],
     ['media', 'Arquivos'],
@@ -889,6 +921,45 @@ function AdminPage() {
                 <button onClick={() => setTab('settings')}><strong>Configurações</strong><span>Frete e comunicação →</span></button>
               </div>
             </section>
+          </div>
+        )}
+
+        {tab === 'orders' && (
+          <div className="admin-page-section">
+            <div className="admin-section-intro">
+              <div><p className="eyebrow">VENDAS</p><h2>Pedidos.</h2><p>Acompanhe pedidos, clientes, itens e atualize o andamento diretamente pelo painel.</p></div>
+              <button className="admin-primary" onClick={loadOrders}>{ordersLoading ? 'Atualizando...' : 'Atualizar pedidos'}</button>
+            </div>
+            {ordersLoading && orders.length === 0 ? <div className="admin-empty">Carregando pedidos…</div> : orders.length === 0 ? (
+              <div className="admin-empty">Nenhum pedido registrado ainda.</div>
+            ) : (
+              <div className="admin-orders-list">
+                {orders.map(order => (
+                  <article className="admin-order-card" key={order.id}>
+                    <div className="admin-order-head">
+                      <div><span className="admin-label">{order.order_number}</span><h3>{order.customer_name}</h3><small>{new Date(order.created_at).toLocaleString('pt-BR')}</small></div>
+                      <select value={order.status} onChange={e => updateOrderStatus(order.id, e.target.value)}>
+                        <option value="pending">Pendente</option>
+                        <option value="paid">Pago</option>
+                        <option value="processing">Em preparação</option>
+                        <option value="shipped">Enviado</option>
+                        <option value="completed">Concluído</option>
+                        <option value="cancelled">Cancelado</option>
+                      </select>
+                    </div>
+                    <div className="admin-order-grid">
+                      <div><span>Cliente</span><strong>{order.customer_email}</strong><small>{order.customer_phone || '—'}</small></div>
+                      <div><span>Entrega</span><strong>{order.address}, {order.address_number}</strong><small>{order.city} / {order.state} · CEP {order.cep || '—'}</small></div>
+                      <div><span>Pagamento</span><strong>{order.payment_method === 'pix' ? 'Pix' : 'Cartão'}</strong><small>{order.coupon ? `Cupom: ${order.coupon}` : 'Sem cupom'}</small></div>
+                      <div><span>Total</span><strong>{money(Number(order.total))}</strong><small>Subtotal {money(Number(order.subtotal))} · Frete {Number(order.shipping) === 0 ? 'Grátis' : money(Number(order.shipping))}</small></div>
+                    </div>
+                    <div className="admin-order-items">
+                      {(order.order_items || []).map(item => <div key={item.id}><span>{item.quantity}×</span><strong>{item.product_name}</strong><small>{item.color} · {item.size}</small><b>{money(Number(item.unit_price) * item.quantity)}</b></div>)}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
