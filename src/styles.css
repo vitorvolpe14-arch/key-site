@@ -3265,3 +3265,65 @@ button:disabled {
     font-size: 33px;
   }
 }
+
+
+/* PHASE 22 — ADMIN OPERATIONS */
+.admin-order-filters {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 220px;
+  gap:10px;
+  margin-top:26px;
+}
+.admin-order-filters input,
+.admin-order-filters select {
+  min-height:44px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--deep);
+  padding:12px 14px;
+  font:inherit;
+  font-size:10px;
+  outline:none;
+}
+.admin-order-filters input:focus,
+.admin-order-filters select:focus {
+  border-color:#8e7770;
+}
+.admin-stats-expanded {
+  grid-template-columns:repeat(6,minmax(0,1fr));
+}
+
+/* PHASE 23 — FINAL UX / PERFORMANCE */
+.checkout-final:disabled {
+  opacity:.55;
+  cursor:wait;
+  transform:none;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline:2px solid var(--wine);
+  outline-offset:3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior:auto !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+  }
+}
+@media (max-width: 1100px) {
+  .admin-stats-expanded { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 760px) {
+  .admin-order-filters {
+    grid-template-columns:1fr;
+  }
+  .admin-stats-expanded { grid-template-columns:1fr 1fr; }
+  .admin-order-card { padding:18px; }
+  .admin-order-head { flex-direction:column; }
+  .admin-order-head select { width:100%; }
+}
