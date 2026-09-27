@@ -1,0 +1,30 @@
+/* KEY ADMIN MOBILE FIX */
+@media (max-width:900px){
+html,body,#root{width:100%;max-width:100vw;overflow-x:hidden!important}
+.admin-shell{width:100%;max-width:100vw;min-width:0;display:block;overflow-x:hidden}
+.admin-sidebar{width:100%;max-width:100%;min-width:0;overflow:hidden}
+.admin-sidebar nav{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;overflow:visible}
+.admin-sidebar nav button{width:100%;min-width:0;justify-content:flex-start;white-space:nowrap}
+.admin-content{width:100%;max-width:100%;min-width:0;padding-left:18px;padding-right:18px;overflow:hidden}
+.admin-topbar{width:100%;min-width:0;flex-direction:column;align-items:stretch;gap:16px;padding:22px 0}
+.admin-topbar>div{min-width:0}
+.admin-topbar h1{overflow-wrap:anywhere}
+.admin-publish{width:100%;min-height:44px}
+.admin-welcome,.admin-section-intro,.admin-banner-card,.admin-product-manager,.admin-settings-grid,.admin-quick-grid{max-width:100%;min-width:0}
+.admin-welcome{overflow:hidden}
+.admin-stats{width:100%;max-width:100%}
+.admin-stats>div{min-width:0;overflow:hidden}
+.admin-stats strong,.admin-stats small,.admin-stats span{overflow-wrap:anywhere}
+.admin-banner-card,.admin-banner-fields,.admin-product-editor,.admin-settings-grid,.admin-card{max-width:100%;min-width:0}
+.admin-banner-fields input,.admin-editor-fields input,.admin-editor-fields textarea,.admin-settings-grid input,.admin-order-filters input,.admin-order-filters select{max-width:100%}
+}
+@media(max-width:600px){
+.admin-sidebar{padding:16px 12px}
+.admin-brand{padding-left:4px;padding-right:4px}
+.admin-sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+.admin-sidebar nav button{padding:11px 9px;font-size:8px}
+.admin-content{padding-left:14px;padding-right:14px}
+.admin-welcome{padding:22px}
+.admin-section-intro{overflow-wrap:anywhere}
+}
+@media(max-width:380px){.admin-sidebar nav{grid-template-columns:1fr}}
