@@ -518,23 +518,32 @@ async function adminDeleteFile(id) {
 }
 
 
-const ADMIN_USERNAME = 'admin'
-const ADMIN_PASSWORD = 'KEY2026'
 const ADMIN_SESSION = 'key-admin-session'
 
 function AdminLogin({ onLogin }) {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const submit = e => {
+  const submit = async e => {
     e.preventDefault()
-    if (username.trim() === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      sessionStorage.setItem(ADMIN_SESSION, 'authenticated')
-      onLogin()
+    setBusy(true)
+    setError('')
+
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password
+    })
+
+    setBusy(false)
+
+    if (authError || !data.session) {
+      setError('E-mail ou senha inválidos.')
       return
     }
-    setError('Usuário ou senha inválidos.')
+
+    onLogin(data.session)
   }
 
   return (
@@ -543,12 +552,12 @@ function AdminLogin({ onLogin }) {
         <div className="admin-login-brand">KEY</div>
         <p className="eyebrow">KEY / MANAGEMENT</p>
         <h1>Acesso restrito.</h1>
-        <p className="admin-login-copy">Entre com suas credenciais para acessar o painel administrativo.</p>
+        <p className="admin-login-copy">Entre com seu e-mail administrativo e senha.</p>
         <form onSubmit={submit} className="admin-login-form">
-          <label>Usuário<input autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Usuário" required /></label>
-          <label>Senha<input autoComplete="current-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha" required /></label>
+          <label>E-mail<input autoComplete="username" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu e-mail" required /></label>
+          <label>Senha<input autoComplete="current-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua senha" required /></label>
           {error && <p className="admin-login-error">{error}</p>}
-          <button className="admin-primary full" type="submit">Entrar no painel</button>
+          <button className="admin-primary full" type="submit" disabled={busy}>{busy ? 'Entrando...' : 'Entrar no painel'}</button>
         </form>
         <button className="admin-login-store" type="button" onClick={() => { window.location.href = '/' }}>Voltar para a loja</button>
       </div>
@@ -557,7 +566,8 @@ function AdminLogin({ onLogin }) {
 }
 
 function AdminPage() {
-  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem(ADMIN_SESSION) === 'authenticated')
+  const [session, setSession] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
   const [tab, setTab] = useState('overview')
   const [files, setFiles] = useState([])
   const [config, setConfig] = useState(readAdminConfig)
@@ -568,8 +578,28 @@ function AdminPage() {
   const [selectedProductId, setSelectedProductId] = useState(1)
 
   useEffect(() => {
-    adminListFiles().then(setFiles).catch(() => setNotice('Não foi possível carregar a biblioteca.')).finally(() => setLoading(false))
+    let mounted = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) {
+        setSession(data.session || null)
+        setAuthLoading(false)
+      }
+    })
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (mounted) setSession(nextSession || null)
+    })
+
+    return () => {
+      mounted = false
+      listener?.subscription?.unsubscribe()
+    }
   }, [])
+
+  useEffect(() => {
+    if (!session) return
+    adminListFiles().then(setFiles).catch(() => setNotice('Não foi possível carregar a biblioteca.')).finally(() => setLoading(false))
+  }, [session])
 
   const saveConfig = async next => {
     setConfig(next)
@@ -752,7 +782,8 @@ function AdminPage() {
     </div>
   )
 
-  if (!authenticated) return <AdminLogin onLogin={() => setAuthenticated(true)} />
+  if (authLoading) return <main className="admin-login-page"><div className="admin-login-card"><div className="admin-login-brand">KEY</div><p className="eyebrow">KEY / MANAGEMENT</p><h1>Verificando acesso.</h1></div></main>
+  if (!session) return <AdminLogin onLogin={setSession} />
 
   return (
     <div className="admin-shell">
@@ -767,7 +798,7 @@ function AdminPage() {
         </nav>
         <div className="admin-sidebar-actions">
           <button className="admin-sidebar-store" onClick={leave}>Ver loja <span>↗</span></button>
-          <button className="admin-logout" onClick={() => { sessionStorage.removeItem(ADMIN_SESSION); setAuthenticated(false) }}>Sair</button>
+          <button className="admin-logout" onClick={async () => { await supabase.auth.signOut(); setSession(null) }}>Sair</button>
         </div>
       </aside>
 
