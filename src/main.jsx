@@ -1210,6 +1210,52 @@ function CategoryPage({ category, products: catalog, inventory, onOpen, onBack }
   )
 }
 
+function LegalPage({ type, onBack }) {
+  const content = {
+    privacy: {
+      eyebrow: 'KEY / PRIVACIDADE',
+      title: 'Política de Privacidade',
+      sections: [
+        ['Dados coletados', 'A KEY coleta os dados informados pelo cliente durante o pedido, como nome, e-mail, telefone e endereço, para processar, entregar e acompanhar a compra.'],
+        ['Uso das informações', 'As informações são utilizadas para atendimento, processamento de pedidos, entrega, comunicação relacionada à compra e cumprimento de obrigações legais.'],
+        ['Compartilhamento', 'Os dados podem ser compartilhados apenas com prestadores necessários à operação do pedido, como serviços de entrega e infraestrutura tecnológica, quando aplicável.'],
+        ['Segurança', 'A KEY adota medidas técnicas e administrativas para proteger os dados tratados em sua operação.']
+      ]
+    },
+    terms: {
+      eyebrow: 'KEY / TERMOS',
+      title: 'Termos de Uso',
+      sections: [
+        ['Pedidos', 'O pedido é registrado após o preenchimento das informações solicitadas e está sujeito à disponibilidade das peças e validação dos dados.'],
+        ['Produtos', 'Cores, medidas, disponibilidade e imagens podem apresentar pequenas variações em relação à visualização em diferentes telas.'],
+        ['Preços', 'Os preços exibidos no site são os valores vigentes no momento da compra e podem ser alterados para novos pedidos.'],
+        ['Atendimento', 'Em caso de dúvidas sobre um pedido, o cliente deve utilizar os canais de contato disponibilizados pela KEY.']
+      ]
+    },
+    returns: {
+      eyebrow: 'KEY / TROCAS',
+      title: 'Trocas e Devoluções',
+      sections: [
+        ['Solicitação', 'Solicitações de troca ou devolução devem ser feitas pelos canais de atendimento da KEY, informando o número do pedido e os dados necessários para identificação da compra.'],
+        ['Condições', 'A peça deve ser devolvida nas condições informadas pela KEY no atendimento, preservando etiquetas e demais elementos originais quando aplicável.'],
+        ['Análise', 'Após o recebimento, a solicitação será analisada de acordo com as condições da compra e com a legislação aplicável.'],
+        ['Prazo e reembolso', 'Prazos, forma de envio e eventual reembolso serão informados ao cliente conforme o caso e a legislação aplicável.']
+      ]
+    }
+  }[type]
+
+  return (
+    <main className="legal-page" id="main-content">
+      <div className="legal-top"><button className="back-link" type="button" onClick={onBack}>← Voltar para a loja</button></div>
+      <section className="legal-content">
+        <p className="eyebrow">{content.eyebrow}</p>
+        <h1>{content.title}</h1>
+        {content.sections.map(([title, body]) => <section key={title}><h2>{title}</h2><p>{body}</p></section>)}
+      </section>
+    </main>
+  )
+}
+
 function NotFoundPage() {
   return (
     <main className="not-found-page" id="main-content">
@@ -1223,6 +1269,9 @@ function NotFoundPage() {
 
 function App() {
   if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') return <AdminPage />
+  if (window.location.pathname === '/privacidade') return <LegalPage type="privacy" onBack={() => { window.location.href = '/' }} />
+  if (window.location.pathname === '/termos') return <LegalPage type="terms" onBack={() => { window.location.href = '/' }} />
+  if (window.location.pathname === '/trocas') return <LegalPage type="returns" onBack={() => { window.location.href = '/' }} />
   if (window.location.pathname !== '/' && !window.location.search) return <NotFoundPage />
 
   const [menuOpen, setMenuOpen] = useState(false)
@@ -1612,7 +1661,7 @@ function App() {
           <footer id="about">
             <div className="footer-brand"><a className="logo" href="#">KEY</a><p>Unlock your style.</p></div>
             <div><h4>Shop</h4><a href="#new">New in</a><a href="#shop">Vestidos</a><a href="#shop">Conjuntos</a><a href="#shop">Blusas</a></div>
-            <div><h4>Help</h4><button className="footer-action" onClick={() => setTrackingOpen(true)}>Acompanhar pedido</button><a href="#about">Contato</a><a href="#about">Envios</a><a href="#about">Trocas</a><a href="#about">Privacidade</a></div>
+            <div><h4>Help</h4><button className="footer-action" onClick={() => setTrackingOpen(true)}>Acompanhar pedido</button><a href="#about">Contato</a><a href="#about">Envios</a><a href="/trocas">Trocas</a><a href="/privacidade">Privacidade</a><a href="/termos">Termos</a></div>
             <div><h4>Follow</h4><a href="#">Instagram</a><a href="#">TikTok</a></div>
           </footer>
           <div className="copyright">© 2026 KEY. Todos os direitos reservados.</div>
