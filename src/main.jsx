@@ -1199,73 +1199,77 @@ function App() {
 
   const finishOrder = async details => {
     const number = `KEY-${Date.now().toString().slice(-6)}`
-    const order = { ...details, items: bag, number }
-    setConfirmation(order)
+    const dbItems = bag.map(item => ({
+      product_id: item.dbId,
+      color: item.color || '',
+      size: item.size,
+      quantity: item.quantity
+    }))
 
-    setInventory(current => {
-      const next = structuredClone(current)
-      bag.forEach(item => {
-        const colors = { ...(next[item.id] || {}) }
-        const sizes = { ...(colors[item.color] || {}) }
-        sizes[item.size] = Math.max(0, Number(sizes[item.size] || 0) - item.quantity)
-        colors[item.color] = sizes
-        next[item.id] = colors
-      })
-      return next
-    })
-
-    try {
-      const orders = JSON.parse(localStorage.getItem('key-orders') || '[]')
-      localStorage.setItem('key-orders', JSON.stringify([order, ...orders].slice(0, 20)))
-    } catch {}
-
-    try {
-      const { data: insertedOrder, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          order_number: number,
-          customer_name: details.shipping?.name || '',
-          customer_email: details.shipping?.email || '',
-          customer_phone: details.shipping?.phone || '',
-          cep: details.shipping?.cep || '',
-          address: details.shipping?.address || '',
-          address_number: details.shipping?.number || '',
-          city: details.shipping?.city || '',
-          state: details.shipping?.state || '',
-          payment_method: details.payment || 'pix',
-          subtotal: details.subtotal || 0,
-          shipping: details.shippingCost || 0,
-          discount: details.discount || 0,
-          total: details.total || 0,
-          coupon: details.coupon || null,
-          status: 'pending'
-        })
-        .select('id')
-        .single()
-
-      if (orderError) throw orderError
-
-      const orderItems = bag.map(item => ({
-        order_id: insertedOrder.id,
-        product_id: item.dbId || null,
-        product_name: item.name,
-        color: item.color || '',
-        size: item.size,
-        quantity: item.quantity,
-        unit_price: item.price
-      }))
-
-      if (orderItems.length && orderItems.every(item => item.product_id)) {
-        const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
-        if (itemsError) throw itemsError
-      }
-    } catch (error) {
-      console.warn('KEY order backend sync unavailable; local order retained.', error)
+    if (dbItems.some(item => !item.product_id)) {
+      setNotice('Não foi possível validar os produtos no servidor. Atualize a página e tente novamente.')
+      return
     }
 
-    setBag([])
-    setCheckoutOpen(false)
-    window.scrollTo({ top: 0, behavior: 'instant' })
+    try {
+      const { data, error } = await supabase.rpc('create_key_order', {
+        p_order_number: number,
+        p_customer_name: details.shipping?.name || '',
+        p_customer_email: details.shipping?.email || '',
+        p_customer_phone: details.shipping?.phone || '',
+        p_cep: details.shipping?.cep || '',
+        p_address: details.shipping?.address || '',
+        p_address_number: details.shipping?.number || '',
+        p_city: details.shipping?.city || '',
+        p_state: details.shipping?.state || '',
+        p_payment_method: details.payment || 'pix',
+        p_coupon: details.coupon || '',
+        p_items: dbItems
+      })
+
+      if (error) throw error
+
+      const serverOrder = Array.isArray(data) ? data[0] : data
+      if (!serverOrder?.order_id) throw new Error('O servidor não retornou o pedido.')
+
+      const order = {
+        ...details,
+        number: serverOrder.order_number,
+        subtotal: Number(serverOrder.subtotal),
+        shippingCost: Number(serverOrder.shipping),
+        discount: Number(serverOrder.discount),
+        total: Number(serverOrder.total),
+        shippingLabel: Number(serverOrder.shipping) === 0 ? 'Grátis' : details.shippingLabel,
+        items: bag
+      }
+
+      setConfirmation(order)
+
+      setInventory(current => {
+        const next = structuredClone(current)
+        bag.forEach(item => {
+          const colors = { ...(next[item.id] || {}) }
+          const sizes = { ...(colors[item.color] || {}) }
+          sizes[item.size] = Math.max(0, Number(sizes[item.size] || 0) - item.quantity)
+          colors[item.color] = sizes
+          next[item.id] = colors
+        })
+        return next
+      })
+
+      try {
+        const orders = JSON.parse(localStorage.getItem('key-orders') || '[]')
+        localStorage.setItem('key-orders', JSON.stringify([order, ...orders].slice(0, 20)))
+      } catch {}
+
+      setBag([])
+      setCheckoutOpen(false)
+      setNotice('Pedido registrado com sucesso.')
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    } catch (error) {
+      console.error('KEY order creation error', error)
+      setNotice(error?.message || 'Não foi possível concluir o pedido. Verifique os dados e tente novamente.')
+    }
   }
 
   const openProduct = product => {
