@@ -376,7 +376,7 @@ function CheckoutPage({ items, onBack, onComplete }) {
             {items.map(item => (
               <div className="checkout-item" key={item.key}>
                 <div className="checkout-thumb"><ProductImage product={item} /></div>
-                <div><h3>{item.name}</h3><p>{item.color} · {item.color} · {item.size} · {item.quantity}x</p></div>
+                <div><h3>{item.name}</h3><p>{item.color} · {item.size} · {item.quantity}x</p></div>
                 <strong>{money(item.price * item.quantity)}</strong>
               </div>
             ))}
