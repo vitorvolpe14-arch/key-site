@@ -353,11 +353,11 @@ function CheckoutPage({ items, onBack, onComplete }) {
               <label>Cidade<input required name="city" value={shipping.city} onChange={update} onBlur={() => calculateShipping(shipping)} placeholder="Sua cidade" /></label>
               <label>UF<input required name="state" value={shipping.state} onChange={update} onBlur={() => calculateShipping(shipping)} placeholder="CE" maxLength="2" /></label>
             </div>
-            <p className="shipping-note">Fortaleza: R$ 15,00 · Região Metropolitana: R$ 20,00 · Demais localidades: frete será integrado posteriormente.</p>
+            <p className="shipping-note">Fortaleza: R$ 15,00 · Região Metropolitana: R$ 20,00 · Outras localidades indisponíveis no momento.</p>
           </div>
 
           <div className="checkout-section">
-            <p className="eyebrow">PAGAMENTO</p>
+            <p className="eyebrow">FORMA DE PAGAMENTO</p>
             <div className="payment-options">
               <button type="button" className={payment === 'pix' ? 'active' : ''} onClick={() => setPayment('pix')}>
                 <span>Pix</span><small>Pagamento instantâneo</small>
@@ -366,7 +366,7 @@ function CheckoutPage({ items, onBack, onComplete }) {
                 <span>Cartão</span><small>Crédito ou débito</small>
               </button>
             </div>
-            <p className="checkout-hint">Pagamento real será conectado posteriormente.</p>
+            <p className="checkout-hint">A forma escolhida será registrada no pedido. A cobrança não é realizada nesta etapa.</p>
           </div>
         </section>
 
@@ -394,8 +394,8 @@ function CheckoutPage({ items, onBack, onComplete }) {
           {discount > 0 && <div className="checkout-total muted"><span>Desconto</span><strong>− {money(discount)}</strong></div>}
           <div className="checkout-total muted"><span>Frete</span><strong>{freeShipping || couponShippingFree ? 'Grátis' : shippingCost === null ? shippingLabel : money(shippingCost)}</strong></div>
           <div className="checkout-total grand"><span>Total</span><strong>{money(total)}</strong></div>
-          <button className="button checkout-final" type="submit">Revisar pedido</button>
-          <p className="checkout-secure">Nenhum pagamento será realizado nesta etapa.</p>
+          <button className="button checkout-final" type="submit">Registrar pedido</button>
+          <p className="checkout-secure">Seu pedido será registrado com segurança.</p>
         </aside>
       </form>
     </main>
@@ -497,7 +497,7 @@ function OrderConfirmation({ order, onContinue }) {
         <p className="eyebrow">KEY / PEDIDO</p>
         <div className="confirmation-mark">✓</div>
         <h1>Pedido recebido.</h1>
-        <p className="confirmation-text">Sua seleção foi registrada. O pagamento ainda não foi processado.</p>
+        <p className="confirmation-text">Sua seleção foi registrada com sucesso. O número do pedido abaixo será usado para acompanhamento.</p>
         <div className="confirmation-number">
           <span>Número do pedido</span>
           <strong>{order.number}</strong>
