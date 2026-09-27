@@ -723,6 +723,8 @@ function AdminPage() {
   const [selectedProductId, setSelectedProductId] = useState(1)
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
+  const [orderSearch, setOrderSearch] = useState('')
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all')
 
   useEffect(() => {
     let mounted = true
@@ -768,6 +770,25 @@ function AdminPage() {
   }, [session, tab])
 
   const updateOrderStatus = async (id, status) => {
+    const currentOrder = orders.find(order => order.id === id)
+    if (!currentOrder) return
+
+    if (status === 'cancelled') {
+      const { error } = await supabase.rpc('cancel_key_order', { p_order_id: id })
+      if (error) {
+        setNotice(error.message || 'Não foi possível cancelar o pedido.')
+        return
+      }
+      setOrders(current => current.map(order => order.id === id ? { ...order, status: 'cancelled' } : order))
+      setNotice('Pedido cancelado e estoque restaurado.')
+      return
+    }
+
+    if (currentOrder.status === 'cancelled') {
+      setNotice('Pedidos cancelados não podem ser reabertos automaticamente, pois o estoque já foi restaurado.')
+      return
+    }
+
     const { error } = await supabase.from('orders').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
     if (error) {
       setNotice('Não foi possível atualizar o pedido.')
@@ -776,6 +797,18 @@ function AdminPage() {
     setOrders(current => current.map(order => order.id === id ? { ...order, status } : order))
     setNotice('Status do pedido atualizado.')
   }
+
+  const filteredOrders = orders.filter(order => {
+    const term = orderSearch.trim().toLowerCase()
+    const matchesSearch = !term || [order.order_number, order.customer_name, order.customer_email, order.city].some(value => String(value || '').toLowerCase().includes(term))
+    const matchesStatus = orderStatusFilter === 'all' || order.status === orderStatusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  const pendingOrders = orders.filter(order => ['pending', 'paid'].includes(order.status)).length
+  const lowStockProducts = products.filter(product =>
+    getVariants(product).some(variant => Object.values(variant.sizes || {}).some(quantity => Number(quantity) > 0 && Number(quantity) <= 2))
+  ).length
 
   const saveConfig = async next => {
     setConfig(next)
@@ -994,8 +1027,10 @@ function AdminPage() {
               <div><p className="eyebrow">PAINEL DA KEY</p><h2>Seu site, em um só lugar.</h2><p>Gerencie banners, produtos e arquivos sem precisar mexer no código.</p></div>
               <button className="admin-primary" onClick={() => setTab('banners')}>Editar página inicial →</button>
             </section>
-            <div className="admin-stats">
+            <div className="admin-stats admin-stats-expanded">
               <div><span>Produtos</span><strong>{products.length}</strong><small>cadastrados</small></div>
+              <div><span>Pedidos pendentes</span><strong>{pendingOrders}</strong><small>aguardando andamento</small></div>
+              <div><span>Estoque baixo</span><strong>{lowStockProducts}</strong><small>produtos com ≤ 2 unidades</small></div>
               <div><span>Banners</span><strong>{config.banners.filter(b => b.enabled).length}</strong><small>ativos</small></div>
               <div><span>Arquivos</span><strong>{files.length}</strong><small>na biblioteca</small></div>
               <div><span>Frete grátis</span><strong>R$ {Number(config.freeShippingThreshold || 0).toLocaleString('pt-BR')}</strong><small>acima desse valor</small></div>
@@ -1018,21 +1053,35 @@ function AdminPage() {
               <div><p className="eyebrow">VENDAS</p><h2>Pedidos.</h2><p>Acompanhe pedidos, clientes, itens e atualize o andamento diretamente pelo painel.</p></div>
               <button className="admin-primary" onClick={loadOrders}>{ordersLoading ? 'Atualizando...' : 'Atualizar pedidos'}</button>
             </div>
-            {ordersLoading && orders.length === 0 ? <div className="admin-empty">Carregando pedidos…</div> : orders.length === 0 ? (
-              <div className="admin-empty">Nenhum pedido registrado ainda.</div>
+            <div className="admin-order-filters">
+              <input aria-label="Buscar pedidos" value={orderSearch} onChange={e => setOrderSearch(e.target.value)} placeholder="Buscar por pedido, cliente, e-mail ou cidade" />
+              <select aria-label="Filtrar por status" value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)}>
+                <option value="all">Todos os status</option>
+                <option value="pending">Pendentes</option>
+                <option value="paid">Pagos</option>
+                <option value="processing">Em preparação</option>
+                <option value="shipped">Enviados</option>
+                <option value="completed">Concluídos</option>
+                <option value="cancelled">Cancelados</option>
+              </select>
+            </div>
+            {ordersLoading && orders.length === 0 ? <div className="admin-empty">Carregando pedidos…</div> : filteredOrders.length === 0 ? (
+              <div className="admin-empty">{orders.length === 0 ? 'Nenhum pedido registrado ainda.' : 'Nenhum pedido corresponde aos filtros.'}</div>
             ) : (
               <div className="admin-orders-list">
-                {orders.map(order => (
+                {filteredOrders.map(order => (
                   <article className="admin-order-card" key={order.id}>
                     <div className="admin-order-head">
                       <div><span className="admin-label">{order.order_number}</span><h3>{order.customer_name}</h3><small>{new Date(order.created_at).toLocaleString('pt-BR')}</small></div>
-                      <select value={order.status} onChange={e => updateOrderStatus(order.id, e.target.value)}>
-                        <option value="pending">Pendente</option>
-                        <option value="paid">Pago</option>
-                        <option value="processing">Em preparação</option>
-                        <option value="shipped">Enviado</option>
-                        <option value="completed">Concluído</option>
-                        <option value="cancelled">Cancelado</option>
+                      <select value={order.status} onChange={e => updateOrderStatus(order.id, e.target.value)} disabled={order.status === 'cancelled'}>
+                        {order.status === 'cancelled' ? <option value="cancelled">Cancelado</option> : <>
+                          <option value="pending">Pendente</option>
+                          <option value="paid">Pago</option>
+                          <option value="processing">Em preparação</option>
+                          <option value="shipped">Enviado</option>
+                          <option value="completed">Concluído</option>
+                          <option value="cancelled">Cancelar e restaurar estoque</option>
+                        </>}
                       </select>
                     </div>
                     <div className="admin-order-grid">
