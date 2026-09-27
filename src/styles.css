@@ -3127,3 +3127,56 @@ img, video {
   .tracking-summary { grid-template-columns:1fr; }
   .tracking-summary div + div { border-left:0; border-top:1px solid var(--line); padding-left:0; }
 }
+
+
+/* PHASE 15 — SEO, ACCESSIBILITY & ERROR STATES */
+.skip-link {
+  position:fixed;
+  top:10px;
+  left:10px;
+  z-index:9999;
+  transform:translateY(-160%);
+  background:var(--deep);
+  color:#fff;
+  padding:10px 14px;
+  font-size:10px;
+  text-decoration:none;
+}
+.skip-link:focus {
+  transform:translateY(0);
+}
+.not-found-page {
+  min-height:calc(100vh - 106px);
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  padding:60px 8vw;
+  background:var(--cream);
+}
+.not-found-page h1 {
+  max-width:800px;
+  margin:12px 0 18px;
+  font-family:var(--serif);
+  font-size:clamp(58px,9vw,120px);
+  line-height:.86;
+  font-weight:400;
+  color:var(--wine);
+  letter-spacing:-.05em;
+}
+.not-found-page p:not(.eyebrow) {
+  max-width:430px;
+  margin:0 0 28px;
+  color:var(--muted);
+  line-height:1.7;
+  font-size:12px;
+}
+button:disabled {
+  cursor:not-allowed;
+}
+@media(max-width:760px) {
+  .not-found-page {
+    min-height:calc(100vh - 86px);
+    padding:40px 20px;
+  }
+}
