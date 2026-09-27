@@ -2783,3 +2783,77 @@ img, video {
     padding-right: 14px;
   }
 }
+
+
+/* PHASE 10 — PRODUCT COLORS & VARIANTS */
+.color-block {
+  margin: 28px 0 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.color-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 13px;
+}
+.color-heading span {
+  font-size: 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .13em;
+}
+.color-heading strong {
+  font-size: 9px;
+  font-weight: 500;
+}
+.color-options {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.color-swatch {
+  --swatch: #222;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(42,16,25,.18);
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.42);
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.color-swatch:hover {
+  transform: scale(1.08);
+}
+.color-swatch.selected {
+  box-shadow: 0 0 0 1px var(--cream), 0 0 0 2px var(--wine);
+  transform: scale(1.08);
+}
+.color-swatch:disabled {
+  opacity: .28;
+  cursor: not-allowed;
+  transform: none;
+}
+.color-name {
+  margin: 9px 0 0;
+  font-size: 9px;
+  color: var(--muted);
+}
+.product-detail-info .size-block {
+  margin-top: 22px;
+}
+.bag-item-title p,
+.checkout-item p {
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .color-block {
+    margin-top: 22px;
+  }
+  .color-swatch {
+    width: 30px;
+    height: 30px;
+  }
+}
