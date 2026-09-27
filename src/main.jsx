@@ -1210,8 +1210,20 @@ function CategoryPage({ category, products: catalog, inventory, onOpen, onBack }
   )
 }
 
+function NotFoundPage() {
+  return (
+    <main className="not-found-page" id="main-content">
+      <p className="eyebrow">KEY / 404</p>
+      <h1>Página não encontrada.</h1>
+      <p>O endereço que você acessou não existe ou foi movido.</p>
+      <a className="button" href="/">Voltar para a KEY</a>
+    </main>
+  )
+}
+
 function App() {
   if (window.location.pathname === '/admin' || window.location.pathname === '/admin/') return <AdminPage />
+  if (window.location.pathname !== '/' && !window.location.search) return <NotFoundPage />
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -1540,7 +1552,7 @@ function App() {
         <CategoryPage category={categoryView} products={publicProducts} inventory={inventory} onOpen={openProduct} onBack={backToHome} />
       ) : (
         <>
-          <main>
+          <main id="main-content">
             <section className="hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.82) 22%, rgba(255,255,255,.24) 48%, rgba(255,255,255,0) 72%), url("${heroImage}")` }}>
               <div className="hero-copy">
                 <p className="eyebrow">KEY / WOMEN'S WEAR</p>
