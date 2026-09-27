@@ -2857,3 +2857,120 @@ img, video {
     height: 30px;
   }
 }
+
+
+/* PHASE 13 — ORDER MANAGEMENT */
+.admin-section-intro {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+}
+.admin-orders-list {
+  display:grid;
+  gap:14px;
+  margin-top:28px;
+}
+.admin-order-card {
+  background:#fff;
+  border:1px solid var(--line);
+  padding:24px;
+}
+.admin-order-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  padding-bottom:18px;
+  border-bottom:1px solid var(--line);
+}
+.admin-order-head h3 {
+  margin:6px 0 4px;
+  font-family:var(--serif);
+  font-size:25px;
+  font-weight:400;
+}
+.admin-order-head small {
+  color:var(--muted);
+}
+.admin-order-head select {
+  min-width:150px;
+  border:1px solid var(--line);
+  background:var(--cream);
+  padding:11px 12px;
+  font:inherit;
+  font-size:11px;
+}
+.admin-order-grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:18px;
+  padding:20px 0;
+}
+.admin-order-grid div {
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  min-width:0;
+}
+.admin-order-grid span {
+  font-size:8px;
+  color:var(--muted);
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.admin-order-grid strong {
+  font-size:11px;
+  font-weight:500;
+  overflow-wrap:anywhere;
+}
+.admin-order-grid small {
+  color:var(--muted);
+  font-size:9px;
+}
+.admin-order-items {
+  border-top:1px solid var(--line);
+  padding-top:14px;
+  display:grid;
+  gap:8px;
+}
+.admin-order-items > div {
+  display:grid;
+  grid-template-columns:35px 1fr auto 100px;
+  gap:10px;
+  align-items:center;
+  font-size:10px;
+}
+.admin-order-items span,
+.admin-order-items small {
+  color:var(--muted);
+}
+.admin-order-items b {
+  text-align:right;
+  font-weight:500;
+}
+@media (max-width:760px) {
+  .admin-section-intro {
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .admin-order-card {
+    padding:18px;
+  }
+  .admin-order-head {
+    flex-direction:column;
+  }
+  .admin-order-head select {
+    width:100%;
+  }
+  .admin-order-grid {
+    grid-template-columns:1fr 1fr;
+  }
+  .admin-order-items > div {
+    grid-template-columns:28px 1fr auto;
+  }
+  .admin-order-items b {
+    grid-column:2 / 4;
+    text-align:left;
+  }
+}
