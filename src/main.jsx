@@ -1275,6 +1275,19 @@ function App() {
   if (window.location.pathname !== '/' && !window.location.search) return <NotFoundPage />
 
   const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const closeOnEscape = event => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [menuOpen])
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [categoryView, setCategoryView] = useState(() => {
     const value = new URLSearchParams(window.location.search).get('categoria')
