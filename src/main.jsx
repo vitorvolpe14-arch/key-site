@@ -428,7 +428,7 @@ function OrderConfirmation({ order, onContinue }) {
         <div className="confirmation-products">
           <span>Itens</span>
           {order.items.map(item => (
-            <div key={item.key}><span>{item.quantity}x {item.name} · {item.size}</span><strong>{money(item.price * item.quantity)}</strong></div>
+            <div key={item.key}><span>{item.quantity}x {item.name} · {item.color} · ${item.size}</span><strong>{money(item.price * item.quantity)}</strong></div>
           ))}
         </div>
         <button className="button" onClick={onContinue}>Continuar na KEY</button>
@@ -1112,7 +1112,7 @@ function App() {
             }
           })
           setCatalogProducts(merged)
-          setInventory(current => ({ ...buildInventory(merged), ...current }))
+          setInventory(buildInventory(merged))
         }
 
         if (Array.isArray(settings) && settings.length) {
