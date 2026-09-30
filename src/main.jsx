@@ -800,6 +800,9 @@ function AdminPage() {
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [orderSearch, setOrderSearch] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
+  const [productStatus, setProductStatus] = useState({})
+  const [productStatusLoading, setProductStatusLoading] = useState(false)
+  const [productStatusSaving, setProductStatusSaving] = useState(null)
   // in a shared project a signed-in account is only let in if it is a KEY admin
   const [allowed, setAllowed] = useState(!SHARED_PROJECT)
   const [accessNotice, setAccessNotice] = useState('')
@@ -894,6 +897,38 @@ function AdminPage() {
     }
     setOrders(current => current.map(order => order.id === id ? { ...order, status } : order))
     setNotice('Status do pedido atualizado.')
+  }
+
+  // active/inactive lives on the server (by legacy id): inactive products are hidden from the store and cannot be ordered
+  const loadProductStatus = async () => {
+    setProductStatusLoading(true)
+    const { data, error } = await supabase.from(table('products')).select('id,legacy_id,active')
+    setProductStatusLoading(false)
+    if (error) {
+      setNotice('Não foi possível carregar o status dos produtos.')
+      return
+    }
+    setProductStatus(Object.fromEntries((data || []).map(row => [row.legacy_id, { dbId: row.id, active: row.active }])))
+  }
+
+  useEffect(() => {
+    if (!session || allowed !== true || tab !== 'products') return
+    loadProductStatus()
+  }, [session, allowed, tab])
+
+  const updateProductStatus = async (id, active) => {
+    const status = productStatus[id]
+    if (!status || productStatusSaving !== null) return
+    setProductStatusSaving(id)
+    const { error } = await supabase.rpc('set_key_product_active', { p_product_id: status.dbId, p_active: active })
+    setProductStatusSaving(null)
+    if (error) {
+      console.error('KEY product status error', error)
+      setNotice('Não foi possível alterar o status do produto.')
+      return
+    }
+    setProductStatus(current => ({ ...current, [id]: { ...current[id], active } }))
+    setNotice(active ? 'Produto ativado: ele já aparece na loja.' : 'Produto desativado: ele não aparece mais na loja.')
   }
 
   const filteredOrders = orders.filter(order => {
@@ -1233,15 +1268,16 @@ function AdminPage() {
 
         {tab === 'products' && (
           <div className="admin-page-section">
-            <div className="admin-section-intro"><div><p className="eyebrow">CATÁLOGO</p><h2>Seus produtos.</h2><p>Edite as informações principais e escolha a foto de cada peça.</p></div></div>
+            <div className="admin-section-intro"><div><p className="eyebrow">CATÁLOGO</p><h2>Seus produtos.</h2><p>Edite as informações principais, escolha a foto e ative ou desative cada peça na loja.</p></div></div>
             <div className="admin-product-manager">
               <div className="admin-product-list">
                 {products.map(product => {
                   const data = config.products[product.id]
                   const selected = files.find(file => file.id === data.fileId)
                   const image = selected ? fileUrl(selected) : data.image
-                  return <button key={product.id} className={selectedProductId === product.id ? 'active' : ''} onClick={() => setSelectedProductId(product.id)}>
-                    <span className="admin-product-mini">{image ? <img src={image} alt="" /> : <span>—</span>}</span><span><strong>{data.name}</strong><small>{money(Number(data.price) || 0)}</small></span>
+                  const inactive = productStatus[product.id]?.active === false
+                  return <button key={product.id} className={`${selectedProductId === product.id ? 'active' : ''} ${inactive ? 'is-inactive' : ''}`} onClick={() => setSelectedProductId(product.id)}>
+                    <span className="admin-product-mini">{image ? <img src={image} alt="" /> : <span>—</span>}</span><span><strong>{data.name}</strong><small>{money(Number(data.price) || 0)}{inactive && <> · <em>Inativo</em></>}</small></span>
                   </button>
                 })}
               </div>
@@ -1250,10 +1286,19 @@ function AdminPage() {
                   const data = config.products[selectedProductId]
                   const selected = files.find(file => file.id === data.fileId)
                   const image = selected ? fileUrl(selected) : data.image
+                  const status = productStatus[selectedProductId]
                   return <>
                     <div className="admin-editor-image">{image ? <img src={image} alt={data.name} /> : <span>Sem foto</span>}</div>
                     <div className="admin-editor-fields">
                       <div className="admin-editor-title"><p className="eyebrow">PRODUTO {String(selectedProductId).padStart(2, '0')}</p><h3>{data.name}</h3></div>
+                      <div className={`admin-product-status ${status?.active === false ? 'is-inactive' : ''}`}>
+                        <div>
+                          <span className="admin-label">Status na loja</span>
+                          <strong>{!status ? '—' : status.active ? 'Ativo' : 'Inativo'}</strong>
+                          <small>{productStatusSaving === selectedProductId ? 'Salvando…' : !status ? (productStatusLoading ? 'Carregando status…' : 'Status indisponível no momento.') : status.active ? 'Aparece na loja e pode ser comprado.' : 'Oculto da loja: clientes não veem nem compram esta peça.'}</small>
+                        </div>
+                        <label className="admin-switch"><input type="checkbox" role="switch" aria-label="Produto ativo na loja" checked={Boolean(status?.active)} disabled={!status} aria-busy={productStatusSaving === selectedProductId} onChange={e => updateProductStatus(selectedProductId, e.target.checked)} /><span /></label>
+                      </div>
                       <label>Nome<input value={data.name} onChange={e => updateProduct(selectedProductId, 'name', e.target.value)} /></label>
                       <div className="admin-two-fields"><label>Preço<input type="number" value={data.price} onChange={e => updateProduct(selectedProductId, 'price', Number(e.target.value))} /></label><label>Categoria<input value={data.category} onChange={e => updateProduct(selectedProductId, 'category', e.target.value)} /></label></div>
                       <label>Descrição<textarea rows="4" value={data.description} onChange={e => updateProduct(selectedProductId, 'description', e.target.value)} /></label>
@@ -1474,7 +1519,8 @@ function App() {
 
         if (cancelled) return
 
-        if (Array.isArray(dbProducts) && dbProducts.length) {
+        // an empty list is valid (every product switched off in the panel); only a failed load keeps the local catalog
+        if (Array.isArray(dbProducts)) {
           const merged = dbProducts.map(row => {
             const fallback = products.find(product => product.id === row.legacy_id) || {}
             return {

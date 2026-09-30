@@ -1877,7 +1877,16 @@ footer h4 {
   font: inherit;
   font-size: 8px;
 }
-.admin-switch input { display: none; }
+.admin-switch { position: relative; }
+.admin-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+}
 .admin-switch span {
   width: 35px;
   height: 20px;
@@ -1900,6 +1909,8 @@ footer h4 {
 }
 .admin-switch input:checked + span { background: var(--wine); }
 .admin-switch input:checked + span::after { transform: translateX(15px); }
+.admin-switch input:focus-visible + span { outline: 1px solid var(--wine); outline-offset: 4px; }
+.admin-switch input:disabled + span { opacity: .45; cursor: default; }
 .admin-product-manager {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -1939,6 +1950,14 @@ footer h4 {
 .admin-product-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-product-list strong { font-size: 8px; font-weight: 500; }
 .admin-product-list small { margin-top: 5px; font-size: 7px; color: var(--muted); }
+.admin-product-list small em {
+  font-style: normal;
+  color: var(--wine);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+.admin-product-list button.is-inactive .admin-product-mini,
+.admin-product-list button.is-inactive strong { opacity: .5; }
 .admin-product-editor {
   padding: 28px;
   display: grid;
@@ -1958,6 +1977,20 @@ footer h4 {
 .admin-editor-fields { display: grid; align-content: start; gap: 15px; }
 .admin-editor-title { margin-bottom: 3px; }
 .admin-editor-title h3 { margin: 5px 0 0; font-family: var(--serif); font-size: 28px; font-weight: 400; }
+.admin-product-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.admin-product-status > div { display: grid; gap: 5px; min-width: 0; }
+.admin-product-status strong { font-family: var(--serif); font-size: 20px; font-weight: 400; }
+.admin-product-status small { font-size: 8px; line-height: 1.5; color: var(--muted); }
+.admin-product-status.is-inactive { background: #f1e8e4; border-color: rgba(92,16,46,.3); }
+.admin-product-status.is-inactive strong { color: var(--wine); }
 .admin-two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .admin-primary.full { width: 100%; }
 .admin-picker {
