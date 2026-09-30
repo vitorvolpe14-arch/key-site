@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import './styles.css'
-import { supabase } from './lib/supabase'
+import { supabase, table, SHARED_PROJECT } from './lib/supabase'
 
 const products = [
   { id: 1, name: 'Azure Set', price: 429, category: 'Conjuntos', image: '/key/jeans.jpeg', sizes: { PP: 2, P: 4, M: 4, G: 2 }, description: 'Conjunto estruturado em textura azul, pensado para uma silhueta marcada e contemporânea.' },
@@ -680,16 +680,54 @@ async function adminDeleteFile(id) {
 
 const ADMIN_SESSION = 'key-admin-session'
 
-function AdminLogin({ onLogin }) {
+// Photos sent before KEY moved to its current Supabase project were copied there with the
+// same paths: links saved in this browser are pointed at the current project when published.
+const ASSETS_URL = supabase.storage.from('key-assets').getPublicUrl('').data.publicUrl.replace(/\/?$/, '/')
+const localizeAsset = url => String(url || '').replace(/^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/key-assets\//, ASSETS_URL)
+
+function AdminLogin({ onLogin, notice = '' }) {
+  const [activating, setActivating] = useState(false)
+  const [code, setCode] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [error, setError] = useState(notice)
   const [busy, setBusy] = useState(false)
 
   const submit = async e => {
     e.preventDefault()
-    setBusy(true)
     setError('')
+
+    if (activating) {
+      if (code.replace(/[^a-z0-9]/gi, '').length !== 12) {
+        setError('Digite o código de 12 caracteres (letras e números).')
+        return
+      }
+      if (password.length < 8 || !/[a-z]/i.test(password) || !/\d/.test(password)) {
+        setError('Use uma senha com 8 ou mais caracteres, com letras e números.')
+        return
+      }
+      if (password !== confirm) {
+        setError('As senhas não conferem.')
+        return
+      }
+    }
+
+    setBusy(true)
+
+    // first access: the one-time activation code creates the panel access
+    if (activating) {
+      const { error: setupError } = await supabase.rpc('key_setup_admin', {
+        p_code: code,
+        p_email: email.trim(),
+        p_password: password
+      })
+      if (setupError) {
+        setBusy(false)
+        setError(setupError.message || 'Não foi possível ativar o acesso.')
+        return
+      }
+    }
 
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
@@ -706,19 +744,41 @@ function AdminLogin({ onLogin }) {
     onLogin(data.session)
   }
 
+  const switchMode = () => {
+    setActivating(current => !current)
+    setError('')
+  }
+
   return (
     <main className="admin-login-page">
       <div className="admin-login-card">
         <div className="admin-login-brand">KEY</div>
         <p className="eyebrow">KEY / MANAGEMENT</p>
-        <h1>Acesso restrito.</h1>
-        <p className="admin-login-copy">Entre com seu e-mail administrativo e senha.</p>
+        <h1>{activating ? 'Primeiro acesso.' : 'Acesso restrito.'}</h1>
+        <p className="admin-login-copy">
+          {activating
+            ? 'Digite o código de ativação que você recebeu e crie a senha do painel. O código vale uma única vez.'
+            : 'Entre com seu e-mail administrativo e senha.'}
+        </p>
         <form onSubmit={submit} className="admin-login-form">
+          {activating && (
+            <label>Código de ativação<input autoComplete="one-time-code" autoCapitalize="characters" spellCheck="false" maxLength={20} value={code} onChange={e => setCode(e.target.value)} placeholder="XXXX-XXXX-XXXX" required /></label>
+          )}
           <label>E-mail<input autoComplete="username" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu e-mail" required /></label>
-          <label>Senha<input autoComplete="current-password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Sua senha" required /></label>
+          <label>{activating ? 'Nova senha' : 'Senha'}<input autoComplete={activating ? 'new-password' : 'current-password'} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={activating ? 'Mínimo de 8 caracteres' : 'Sua senha'} required /></label>
+          {activating && (
+            <label>Repita a senha<input autoComplete="new-password" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repita a senha" required /></label>
+          )}
           {error && <p className="admin-login-error">{error}</p>}
-          <button className="admin-primary full" type="submit" disabled={busy}>{busy ? 'Entrando...' : 'Entrar no painel'}</button>
+          <button className="admin-primary full" type="submit" disabled={busy}>
+            {busy ? (activating ? 'Ativando...' : 'Entrando...') : (activating ? 'Ativar acesso e entrar' : 'Entrar no painel')}
+          </button>
         </form>
+        {SHARED_PROJECT && (
+          <button className="admin-login-store" type="button" onClick={switchMode}>
+            {activating ? 'Já tenho acesso — entrar' : 'Recebeu um código de ativação?'}
+          </button>
+        )}
         <button className="admin-login-store" type="button" onClick={() => { window.location.href = '/' }}>Voltar para a loja</button>
       </div>
     </main>
@@ -740,6 +800,10 @@ function AdminPage() {
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [orderSearch, setOrderSearch] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
+  // in a shared project a signed-in account is only let in if it is a KEY admin
+  const [allowed, setAllowed] = useState(!SHARED_PROJECT)
+  const [accessNotice, setAccessNotice] = useState('')
+  const sessionUserId = session?.user?.id || ''
 
   useEffect(() => {
     let mounted = true
@@ -761,15 +825,34 @@ function AdminPage() {
   }, [])
 
   useEffect(() => {
-    if (!session) return
+    if (!SHARED_PROJECT || !sessionUserId) return
+    let active = true
+    setAllowed(null)
+    supabase.rpc('is_key_admin').then(({ data, error }) => {
+      if (!active) return
+      if (!error && data === true) {
+        setAllowed(true)
+        return
+      }
+      setAllowed(false)
+      setAccessNotice(error ? 'Não foi possível verificar o acesso. Tente de novo.' : 'Esta conta não tem acesso ao painel da KEY.')
+      supabase.auth.signOut().finally(() => setSession(null))
+    })
+    return () => {
+      active = false
+    }
+  }, [sessionUserId])
+
+  useEffect(() => {
+    if (!session || allowed !== true) return
     adminListFiles().then(setFiles).catch(() => setNotice('Não foi possível carregar a biblioteca.')).finally(() => setLoading(false))
-  }, [session])
+  }, [session, allowed])
 
   const loadOrders = async () => {
     setOrdersLoading(true)
     const { data, error } = await supabase
-      .from('orders')
-      .select('id,order_number,customer_name,customer_email,customer_phone,cep,address,address_number,city,state,payment_method,subtotal,shipping,discount,total,coupon,status,created_at,order_items(id,product_name,color,size,quantity,unit_price)')
+      .from(table('orders'))
+      .select(`id,order_number,customer_name,customer_email,customer_phone,cep,address,address_number,city,state,payment_method,subtotal,shipping,discount,total,coupon,status,created_at,order_items:${table('order_items')}(id,product_name,color,size,quantity,unit_price)`)
       .order('created_at', { ascending: false })
     setOrdersLoading(false)
     if (error) {
@@ -780,9 +863,9 @@ function AdminPage() {
   }
 
   useEffect(() => {
-    if (!session || tab !== 'orders') return
+    if (!session || allowed !== true || tab !== 'orders') return
     loadOrders()
-  }, [session, tab])
+  }, [session, allowed, tab])
 
   const updateOrderStatus = async (id, status) => {
     const currentOrder = orders.find(order => order.id === id)
@@ -804,7 +887,7 @@ function AdminPage() {
       return
     }
 
-    const { error } = await supabase.from('orders').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
+    const { error } = await supabase.from(table('orders')).update({ status, updated_at: new Date().toISOString() }).eq('id', id)
     if (error) {
       setNotice('Não foi possível atualizar o pedido.')
       return
@@ -834,7 +917,7 @@ function AdminPage() {
       for (let index = 0; index < (next.banners || []).length; index += 1) {
         const banner = next.banners[index]
         const selectedFile = (files || []).find(file => file.id === banner.fileId)
-        const imagePath = banner.image || selectedFile?.storageUrl || ''
+        const imagePath = localizeAsset(banner.image || selectedFile?.storageUrl || '')
         const payload = {
           id: banner.id,
           title: banner.title || '',
@@ -846,7 +929,7 @@ function AdminPage() {
         }
 
         const { data, error } = await supabase
-          .from('banners')
+          .from(table('banners'))
           .update(payload)
           .eq('id', banner.id)
           .select('id')
@@ -854,7 +937,7 @@ function AdminPage() {
         if (error) throw error
 
         if (!data?.length) {
-          const { error: insertError } = await supabase.from('banners').insert(payload)
+          const { error: insertError } = await supabase.from(table('banners')).insert(payload)
           if (insertError && insertError.code !== '23505') throw insertError
         }
       }
@@ -866,7 +949,7 @@ function AdminPage() {
 
       for (const setting of settings) {
         const { data, error } = await supabase
-          .from('site_settings')
+          .from(table('site_settings'))
           .update({ value: setting.value })
           .eq('key', setting.key)
           .select('key')
@@ -874,7 +957,7 @@ function AdminPage() {
         if (error) throw error
 
         if (!data?.length) {
-          const { error: insertError } = await supabase.from('site_settings').insert(setting)
+          const { error: insertError } = await supabase.from(table('site_settings')).insert(setting)
           if (insertError && insertError.code !== '23505') throw insertError
         }
       }
@@ -1007,8 +1090,8 @@ function AdminPage() {
     </div>
   )
 
-  if (authLoading) return <main className="admin-login-page"><div className="admin-login-card"><div className="admin-login-brand">KEY</div><p className="eyebrow">KEY / MANAGEMENT</p><h1>Verificando acesso.</h1></div></main>
-  if (!session) return <AdminLogin onLogin={setSession} />
+  if (authLoading || (session && allowed !== true)) return <main className="admin-login-page"><div className="admin-login-card"><div className="admin-login-brand">KEY</div><p className="eyebrow">KEY / MANAGEMENT</p><h1>Verificando acesso.</h1></div></main>
+  if (!session) return <AdminLogin notice={accessNotice} onLogin={next => { setAccessNotice(''); setSession(next) }} />
 
   return (
     <div className="admin-shell">
@@ -1384,9 +1467,9 @@ function App() {
     const loadStoreData = async () => {
       try {
         const [{ data: dbProducts }, { data: settings }, { data: banners }] = await Promise.all([
-          supabase.from('products').select('legacy_id,name,price,description,image_url,colors,sizes,variants,stock,active').eq('active', true).order('legacy_id'),
-          supabase.from('site_settings').select('key,value'),
-          supabase.from('banners').select('id,title,subtitle,cta,image_path,enabled,sort_order').order('sort_order')
+          supabase.from(table('products')).select('legacy_id,name,price,description,image_url,colors,sizes,variants,stock,active').eq('active', true).order('legacy_id'),
+          supabase.from(table('site_settings')).select('key,value'),
+          supabase.from(table('banners')).select('id,title,subtitle,cta,image_path,enabled,sort_order').order('sort_order')
         ])
 
         if (cancelled) return
