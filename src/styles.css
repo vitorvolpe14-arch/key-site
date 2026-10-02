@@ -431,6 +431,33 @@ footer h4 {
   text-transform: uppercase;
   letter-spacing: .1em;
   color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+}
+/* Crédito "Site criado por volpe": a raposa e o nome levam ao Instagram @volpedev. */
+.site-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color .2s ease;
+}
+.site-credit:hover,
+.site-credit:focus-visible { color: var(--wine); }
+.site-credit-fox {
+  width: auto;
+  height: 12px;
+  aspect-ratio: 399 / 733;
+  fill: currentColor;
+  transform-origin: 50% 80%;
+  transition: transform .4s ease;
+}
+.site-credit-name { font-family: var(--serif); font-size: 11px; text-transform: none; letter-spacing: .02em; }
+.site-credit:hover .site-credit-fox { transform: rotate(-12deg); }
+@media (prefers-reduced-motion: reduce) {
+  .site-credit:hover .site-credit-fox { transform: none; }
 }
 @media (max-width:900px) {
   .product-grid { grid-template-columns: repeat(2,1fr); }
