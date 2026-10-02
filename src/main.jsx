@@ -1875,7 +1875,7 @@ function App() {
           </footer>
           <div className="copyright">
             <span>© 2026 KEY. Todos os direitos reservados.</span>
-            <a className="site-credit" href="https://www.instagram.com/volpedev/" target="_blank" rel="noopener noreferrer" aria-label="Site criado por volpe, abrir @volpedev no Instagram">
+            <a className="site-credit" href="https://www.instagram.com/volpe.dev/" target="_blank" rel="noopener noreferrer" aria-label="Site criado por volpe, abrir @volpe.dev no Instagram">
               <span>Site criado por</span>
               <svg className="site-credit-fox" viewBox="0 0 399 733" aria-hidden="true" focusable="false"><path d={VOLPE_FOX} /></svg>
               <span className="site-credit-name">volpe</span>
